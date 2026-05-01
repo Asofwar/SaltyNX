@@ -86,9 +86,7 @@ static inline bool file_or_directory_exists(const char *filename)
 
 static inline void SaltySD_printf(const char* format, ...)
 {
-	FILE* logflag = fopen("sdmc:/SaltySD/flags/log.flag", "r");
-	if (logflag == NULL) return;
-	fclose(logflag);
+	if (file_or_directory_exists("sdmc:/SaltySD/flags/log.flag") == false) return;
 	
 	char buffer[256];
 
