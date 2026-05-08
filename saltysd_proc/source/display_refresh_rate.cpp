@@ -1,4 +1,4 @@
-#include <switch.h>
+#include "shared.h"
 #include <cstring>
 #include "useful.h"
 #include <math.h>
@@ -18,19 +18,6 @@ bool isRetroSUPER = false;
 bool isPossiblySpoofedRetro = false;
 bool wasRetroSuperTurnedOff = false;
 uint32_t last_vActive = 1080;
-
-extern uint64_t dsiVirtAddr;
-extern bool isDocked;
-extern bool dontForce60InDocked;
-extern bool matchLowestDocked;
-extern bool isLite;
-extern uint64_t clkVirtAddr;
-extern struct NxFpsSharedBlock* nx_fps;
-extern bool displaySync;
-extern bool displaySyncutOfFocus60;
-extern bool displaySyncDocked;
-extern bool displaySyncDockedOutOfFocus60;
-extern SharedMemory _sharedMemory;
 
 constexpr uint8_t DockedModeRefreshRateAllowedValues[] = {40, 45, 50, 55, 60, 70, 72, 75, 80, 90, 95, 100, 110, 120};
 bool DockedModeRefreshRateAllowed[sizeof(DockedModeRefreshRateAllowedValues)] = {0};

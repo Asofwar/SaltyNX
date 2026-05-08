@@ -5,10 +5,9 @@
 #include "useful.h"
 #include "elf_parser.hpp"
 #include "elf32_parser.hpp"
+#include "shared.h"
 
 using namespace elf_parser;
-
-extern uintptr_t game_start_address;
 
 void *text_save;
 void *data_save;
