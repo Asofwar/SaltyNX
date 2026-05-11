@@ -363,25 +363,13 @@ static Result serviceGetBID(IpcCommand* c) {
     return 0;
 }
 
-static Result serviceException(IpcCommand* c) {
-    IpcParsedCommand r = {0};
-    ipcParse(&r);
-
+static Result serviceException() {
     SERVICE_LOG();
-    
-    // Ship off results
-    struct {
-        u64 magic;
-        u64 result;
-        u64 reserved[2];
-    } *raw;
 
     return exception;
 }
 
 static Result serviceGetDisplayRefreshRate(IpcCommand* c) {
-    IpcParsedCommand r = {0};
-    ipcParse(&r);
     
     // Ship off results
     struct {
