@@ -15,6 +15,8 @@
 #define MODULE_SALTYSD 420
 #define NVDISP_PANEL_GET_VENDOR_ID 0xC003021A
 
+u32 __nx_fs_num_sessions = 1;
+
 const size_t shmem_size = 0x1000;
 
 struct NxFpsSharedBlock* nx_fps = 0;
