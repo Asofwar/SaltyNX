@@ -1173,7 +1173,7 @@ static Result handleServiceCmd(int cmd)
         case handleService_CheckIfSharedMemoryAvailable:              {ret = serviceCheckIfSharedMemoryAvailable(&c); if (ret) break; return 0;}
         case handleService_GetSharedMemoryHandle:                     {ret = serviceGetSharedMemoryHandle(&c); break;}
         case handleService_GetBID:                                    {ret = serviceGetBID(&c); if (ret) break; return 0;}
-        case handleService_Exception:                                 {ret = serviceException(&c); if (ret) break; return 0;}
+        case handleService_Exception:                                 {ret = serviceException(); break;}
         case handleService_GetDisplayRefreshRate:                     {ret = serviceGetDisplayRefreshRate(&c); if (ret) break; return 0;}
         case handleService_SetDisplayRefreshRate:                     {ret = serviceSetDisplayRefreshRate(); break;}
         case handleService_SetDisplaySync:                            {ret = serviceSetDisplaySync(); break;}
