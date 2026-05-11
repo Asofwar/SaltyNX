@@ -20,7 +20,6 @@ This fork includes many new features (aforementioned NX-FPS and ReverseNX-RT), c
 
 > [!IMPORTANT]
 > Known issues:
-> - Instability with some custom sysmodules (like emuiibo),
 > - Cheats using HEAP+offset address instead of MAIN+offset address chain may not work properly.
 
 Tools utilizing SaltyNX:
