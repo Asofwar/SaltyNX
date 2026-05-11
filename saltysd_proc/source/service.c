@@ -489,9 +489,6 @@ static Result serviceSetMatchLowestRR() {
 }
 
 static Result serviceGetDockedHighestRefreshRate(IpcCommand* c) {
-    IpcParsedCommand r = {0};
-    ipcParse(&r);
-
     SERVICE_LOG();
     
     // Ship off results
@@ -516,9 +513,6 @@ static Result serviceGetDockedHighestRefreshRate(IpcCommand* c) {
 }
 
 static Result serviceIsPossiblyRetroRemake(IpcCommand* c) {
-    IpcParsedCommand r = {0};
-    ipcParse(&r);
-
     SERVICE_LOG();
     
     // Ship off results
@@ -595,7 +589,6 @@ static Result serviceSetDisplaySyncRefreshRate60WhenOutOfFocus() {
 }
 
 static Result serviceSdcardFopen(IpcCommand* c) {
-
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
