@@ -1,4 +1,3 @@
-
 struct FileId {
     int id;
     FILE* file;
