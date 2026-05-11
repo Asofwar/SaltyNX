@@ -6,10 +6,74 @@
 #include "useful.h"
 #include "loadelf.h"
 #include "display_refresh_rate.h"
+#include <dirent.h>
+#include <errno.h>
+
+#define SERVICE_LOG(fmt, ...) \
+    SaltySD_printf("SaltyNX: [%s] " fmt "\n", __func__, ##__VA_ARGS__)
+
+#define SALTYSD_RESULT(id, val) MAKERESULT(MODULE_SALTYSD, 9000 + ((id) * 10) + (val))
+
+#if defined(_DIRENT_HAVE_D_NAMLEN) || defined(_DIRENT_HAVE_D_RECLEN) || defined(_DIRENT_HAVE_D_OFF)
+#error "Wrong DIR structure detected!"
+#endif
+#if !defined(_DIRENT_HAVE_D_TYPE)
+#error "Wrong DIR structure detected!"
+#endif
+static_assert(sizeof(ino_t) == 2);
+
+struct FileId {
+    int id;
+    FILE* file;
+};
+
+struct DirId {
+    int id;
+    DIR* dir;
+};
+
+size_t openedFilesAmount = 0;
+struct FileId openedFilesArray[FOPEN_MAX-1] = {0};
+size_t openedDirsAmount = 0;
+struct DirId openedDirsArray[OPEN_MAX-1] = {0};
+
+typedef enum {
+    handleService_EndSession,
+    handleService_LoadELF,
+    handleService_RestoreBootstrapCode,
+    handleService_Memcpy,
+    handleService_GetSDCard,
+    handleService_Log,
+    handleService_CheckIfSharedMemoryAvailable,
+    handleService_GetSharedMemoryHandle,
+    handleService_GetBID,
+    handleService_Exception,
+    handleService_GetDisplayRefreshRate,
+    handleService_SetDisplayRefreshRate,
+    handleService_SetDisplaySync,
+    handleService_SetAllowedDockedRefreshRates,
+    handleService_SetDontForce60InDocked,
+    handleService_SetMatchLowestRR,
+    handleService_GetDockedHighestRefreshRate,
+    handleService_IsPossiblyRetroRemake,
+    handleService_SetDisplaySyncDocked,
+    handleService_SetDisplaySyncRefreshRate60WhenOutOfFocus,
+    handleService_SdcardFopen,
+    handleService_SdcardFread,
+    handleService_SdcardFclose,
+    handleService_SdcardFseek,
+    handleService_SdcardFtell,
+    handleService_SdcardRemove,
+    handleService_SdcardFwrite,
+    handleService_SdcardOpendir,
+    handleService_SdcardMkdir,
+    handleService_SdcardReaddir,
+    handleService_SdcardClosedir
+} handleService;
 
 static Result serviceEndSession() {
     should_terminate = true;
-    //SaltySD_printf("SaltySD: serviceEndSession handler, terminating...\n");
+    SERVICE_LOG();
     return 0;
 }
 
@@ -17,6 +81,11 @@ static Result serviceLoadELF(IpcCommand* c) {
     Result ret = 0;
     IpcParsedCommand r = {0};
     ipcParse(&r);
+
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_LoadELF, 3); // This call is reserved only for Core
+    }
 
     struct {
         u64 magic;
@@ -32,7 +101,7 @@ static Result serviceLoadELF(IpcCommand* c) {
     
     memcpy(name, resp->name, 64);
     
-    SaltySD_printf("SaltySD: serviceLoadELF handler, proc handle %x, heap %lx, path %s\n", proc, heap, name);
+    SERVICE_LOG("proc handle %x, heap %lx, path %s", proc, heap, name);
     
     char* path = malloc(96);
     u32 elf_size = 0;
@@ -49,7 +118,7 @@ static Result serviceLoadELF(IpcCommand* c) {
 
     if (!f)
     {
-        SaltySD_printf("SaltySD: serviceLoadELF handler, failed to load plugin `%s'!\n", name);
+        SERVICE_LOG("failed to load plugin `%s'!", name);
         elf_size = 0;
     }
     else
@@ -58,7 +127,7 @@ static Result serviceLoadELF(IpcCommand* c) {
         elf_size = ftell(f);
         fseek(f, 0, SEEK_SET);
         
-        SaltySD_printf("SaltySD: serviceLoadELF handler, loading %s, size 0x%x\n", path, elf_size);
+        SERVICE_LOG("loading %s, size 0x%x", path, elf_size);
     }
     free(path);
     
@@ -67,10 +136,10 @@ static Result serviceLoadELF(IpcCommand* c) {
         if (!arm32)
             ret = load_elf_proc(proc, r.Pid, heap, &new_start, &new_size, f, elf_size);
         else ret = load_elf32_proc(proc, r.Pid, (u32)heap, (u32*)&new_start, (u32*)&new_size, f, elf_size);
-        if (ret) SaltySD_printf("SaltySD: serviceLoadELF handler, Load_elf arm32: %d, ret: 0x%x\n", arm32, ret);
+        if (ret) SERVICE_LOG("Load_elf arm32: %d, ret: 0x%x", arm32, ret);
     }
     else
-        ret = MAKERESULT(MODULE_SALTYSD, 1);
+        ret = SALTYSD_RESULT(handleService_LoadELF, 1);
 
     svcCloseHandle(proc);
     
@@ -85,6 +154,8 @@ static Result serviceLoadELF(IpcCommand* c) {
         u64 new_size;
     } *raw;
 
+    if (R_SUCCEEDED(ret)) SERVICE_LOG("new_addr to %lx, %x", new_start, ret);
+
     raw = ipcPrepareHeader(c, sizeof(*raw));
 
     raw->magic = SFCO_MAGIC;
@@ -92,8 +163,6 @@ static Result serviceLoadELF(IpcCommand* c) {
     raw->new_addr = new_start;
     raw->new_size = new_size;
     
-    if (R_SUCCEEDED(ret)) debug_log("SaltySD: serviceLoadELF handler, new_addr to %lx, %x\n", new_start, ret);
-
     return 0;
 }
 
@@ -102,7 +171,12 @@ static Result serviceRestoreBootstrapCode() {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    SaltySD_printf("SaltySD: serviceRestoreBootstrapCode handler\n");
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_RestoreBootstrapCode, 3); //// This call is reserved only for Core
+    }
+
+    SERVICE_LOG();
     
     Handle debug;
     ret = svcDebugActiveProcess(&debug, r.Pid);
@@ -121,6 +195,11 @@ static Result serviceMemcpy(IpcCommand* c) {
     Result ret = 0;
     IpcParsedCommand r = {0};
     ipcParse(&r);
+
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_Memcpy, 3); // This call is reserved only for Core
+    }
 
     struct {
         u64 magic;
@@ -162,33 +241,35 @@ static Result serviceMemcpy(IpcCommand* c) {
     raw->magic = SFCO_MAGIC;
     raw->result = ret;
 
-    SaltySD_printf("SaltySD: serviceMemcpy handler, memcpy(%lx, %lx, %lx)\n", to, from, size);
+    SERVICE_LOG("memcpy(%lx, %lx, %lx)", to, from, size);
 
     return 0;
 }
 
 static Result serviceGetSDCard(IpcCommand* c) {
-    ipcSendHandleCopy(c, sdcard);
+    SERVICE_LOG("stubbed");
 
-    SaltySD_printf("SaltySD: serviceGetSDCard handler\n");
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
 
-    return 0;
+    if (r.HasPid != true || r.Pid != PIDnow) return SALTYSD_RESULT(handleService_GetSDCard, 3); // This call is reserved only for Core
+
+    //ipcSendHandleCopy(c, sdcard);
+
+    //return 0;
+    return SALTYSD_RESULT(handleService_GetSDCard, 1);
 }
 
 static Result serviceLog() {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    struct {
-        u64 magic;
-        u64 command;
-        char log[64];
-        u32 reserved[2];
-    } *resp = r.Raw;
+    if (r.NumBuffers != 1) return SALTYSD_RESULT(handleService_Log, 4); // Buffer not received
+    if (r.HasPid != true || r.Pid != PIDnow) return SALTYSD_RESULT(handleService_Log, 3); //// This call is reserved only for Core
 
-    SaltySD_printf(resp->log);
+    const char* log = r.Buffers[0];
 
-    SaltySD_printf("SaltySD: serviceLog handler\n");
+    SaltySD_printf("SaltyNX: [log] %s", log);
 
     return 0;
 }
@@ -206,7 +287,7 @@ static Result serviceCheckIfSharedMemoryAvailable(IpcCommand* c) {
 
     u64 new_size = resp->size;
 
-    SaltySD_printf("SaltySD: serviceCheckIfSharedMemoryAvailable handler, size: %d\n", new_size);
+    SERVICE_LOG("size: %d", new_size);
 
     struct {
         u64 magic;
@@ -219,7 +300,7 @@ static Result serviceCheckIfSharedMemoryAvailable(IpcCommand* c) {
 
     raw->magic = SFCO_MAGIC;
     if (!new_size) {
-        SaltySD_printf("SaltySD: serviceCheckIfSharedMemoryAvailable failed. Wrong size.");
+        SERVICE_LOG("Failed. Wrong size.");
         raw->offset = 0;
         raw->result = 0xFFE;
     }
@@ -237,13 +318,13 @@ static Result serviceCheckIfSharedMemoryAvailable(IpcCommand* c) {
             }
         }
         else {
-            SaltySD_printf("SaltySD: serviceCheckIfSharedMemoryAvailable failed. shmemMap error.");
+            SERVICE_LOG("Failed. shmemMap error.");
             raw->offset = -1;
             raw->result = 0xFFE;
         }
     }
     else {
-        SaltySD_printf("SaltySD: serviceCheckIfSharedMemoryAvailable failed. Not enough free space. Left: %d\n", (shmem_size - reservedSharedMemory));
+        SERVICE_LOG("Failed. Not enough free space. Left: %d B", (shmem_size - reservedSharedMemory));
         raw->offset = -1;
         raw->result = 0xFFE;
     }
@@ -252,7 +333,7 @@ static Result serviceCheckIfSharedMemoryAvailable(IpcCommand* c) {
 }
 
 static Result serviceGetSharedMemoryHandle(IpcCommand* c) {
-    SaltySD_printf("SaltySD: serviceGetSharedMemoryHandle handler\n");
+    SERVICE_LOG();
 
     ipcSendHandleCopy(c, _sharedMemory.handle);
 
@@ -263,7 +344,12 @@ static Result serviceGetBID(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    SaltySD_printf("SaltySD: serviceGetBID handler, PID: %ld\n", PIDnow);
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_GetBID, 3); // This call is reserved only for Core
+    }
+
+    SERVICE_LOG("PID: %ld", PIDnow);
 
     struct {
         u64 magic;
@@ -281,7 +367,7 @@ static Result serviceException(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    SaltySD_printf("SaltySD: serviceException handler\n");
+    SERVICE_LOG();
     
     // Ship off results
     struct {
@@ -289,6 +375,8 @@ static Result serviceException(IpcCommand* c) {
         u64 result;
         u64 reserved[2];
     } *raw;
+
+    return exception;
 
     raw = ipcPrepareHeader(c, sizeof(*raw));
 
@@ -338,8 +426,8 @@ static Result serviceSetDisplayRefreshRate() {
         refreshRate = refreshRate_temp;
         ret = 0;
     }
-    else ret = 0x1234;
-    SaltySD_printf("SaltySD: serviceSetDisplayRefreshRate handler, refresh rate requested: %d, ret: 0x%x\n", refreshRate_temp, ret);
+    else ret = SALTYSD_RESULT(handleService_SetDisplayRefreshRate, 1);
+    SERVICE_LOG("refresh rate requested: %d, ret: 0x%x", refreshRate_temp, ret);
     return ret;
 }
 
@@ -358,12 +446,11 @@ static Result serviceSetDisplaySync() {
     if (displaySync) {
         FILE* file = fopen("sdmc:/SaltySD/flags/displaysync.flag", "wb");
         fclose(file);
-        SaltySD_printf("SaltySD: serviceSetDisplaySync handler -> %d\n", displaySync);
     }
     else {
         remove("sdmc:/SaltySD/flags/displaysync.flag");
-        SaltySD_printf("SaltySD: serviceSetDisplaySync handler -> %d\n", displaySync);
     }
+    SERVICE_LOG("%d", displaySync);
 
     return 0;
 }
@@ -381,7 +468,7 @@ static Result serviceSetAllowedDockedRefreshRates() {
     } *resp = r.Raw;
 
     setAllowedDockedRefreshRatesIPC(resp -> refreshRate, (bool)resp->is720p);
-    SaltySD_printf("SaltySD: serviceSetAllowedDockedRefreshRates handler\n");
+    SERVICE_LOG();
 
     return 0;
 }
@@ -398,7 +485,7 @@ static Result serviceSetDontForce60InDocked() {
     } *resp = r.Raw;
 
     dontForce60InDocked = (bool)(resp -> force);
-    SaltySD_printf("SaltySD: serviceSetDontForce60InDocked handler\n");
+    SERVICE_LOG();
 
     return 0;
 }
@@ -415,7 +502,7 @@ static Result serviceSetMatchLowestRR() {
     } *resp = r.Raw;
 
     matchLowestDocked = (bool)(resp -> force);
-    SaltySD_printf("SaltySD: serviceSetMatchLowestRR handler\n");
+    SERVICE_LOG();
 
     return 0;
 }
@@ -424,7 +511,7 @@ static Result serviceGetDockedHighestRefreshRate(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    SaltySD_printf("SaltySD: serviceGetDockedHighestRefreshRate handler\n");
+    SERVICE_LOG();
     
     // Ship off results
     struct {
@@ -451,7 +538,7 @@ static Result serviceIsPossiblyRetroRemake(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    SaltySD_printf("SaltySD: serviceIsPossiblyRetroRemake handler\n");
+    SERVICE_LOG();
     
     // Ship off results
     struct {
@@ -489,7 +576,7 @@ static Result serviceSetDisplaySyncDocked() {
     else {
         remove("sdmc:/SaltySD/flags/displaysyncdocked.flag");
     }
-    SaltySD_printf("SaltySD: serviceSetDisplaySyncDocked handler -> %d\n", displaySyncDocked);
+    SERVICE_LOG("%d", displaySyncDocked);
 
     return 0;
 }
@@ -509,7 +596,7 @@ static Result serviceSetDisplaySyncRefreshRate60WhenOutOfFocus() {
     bool inDocked = (bool)(resp -> inDocked);
     if (inDocked) {
         displaySyncDockedOutOfFocus60 = (bool)(resp -> value);
-        SaltySD_printf("SaltySD: serviceSetDisplaySyncRefreshRate60WhenOutOfFocus handler -> docked %d\n", displaySyncDockedOutOfFocus60);
+        SERVICE_LOG("Docked %d", displaySyncDockedOutOfFocus60);
     }
     else {
         displaySyncOutOfFocus60 = (bool)(resp -> value);
@@ -520,34 +607,579 @@ static Result serviceSetDisplaySyncRefreshRate60WhenOutOfFocus() {
         else {
             remove("sdmc:/SaltySD/flags/displaysync_outoffocus.flag");
         }
-        SaltySD_printf("SaltySD: serviceSetDisplaySyncRefreshRate60WhenOutOfFocus handler -> handheld %d\n", displaySyncOutOfFocus60);
+        SERVICE_LOG("Handheld %d", displaySyncOutOfFocus60);
     }
 
     return 0;
 }
 
-typedef enum {
-    handleService_EndSession,
-    handleService_LoadELF,
-    handleService_RestoreBootstrapCode,
-    handleService_Memcpy,
-    handleService_GetSDCard,
-    handleService_Log,
-    handleService_CheckIfSharedMemoryAvailable,
-    handleService_GetSharedMemoryHandle,
-    handleService_GetBID,
-    handleService_Exception,
-    handleService_GetDisplayRefreshRate,
-    handleService_SetDisplayRefreshRate,
-    handleService_SetDisplaySync,
-    handleService_SetAllowedDockedRefreshRates,
-    handleService_SetDontForce60InDocked,
-    handleService_SetMatchLowestRR,
-    handleService_GetDockedHighestRefreshRate,
-    handleService_IsPossiblyRetroRemake,
-    handleService_SetDisplaySyncDocked,
-    handleService_SetDisplaySyncRefreshRate60WhenOutOfFocus
-} handleService;
+static Result serviceSdcardFopen(IpcCommand* c) {
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardFopen, 4);
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardFopen, 3);
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        char mode[4];
+    } *resp = r.Raw;
+
+    struct {
+        u64 magic;
+        u64 result;
+        u32 id;
+    } *raw;
+
+    if (openedFilesAmount >= FOPEN_MAX-1) {
+        SERVICE_LOG("Too much files opened at once.");
+        raw = ipcPrepareHeader(c, sizeof(*raw));
+        raw->magic = SFCO_MAGIC;
+        raw->result = SALTYSD_RESULT(handleService_SdcardFopen, 1);
+        raw->id = 0;
+        return 0;
+    }
+
+    const char* filepath = r.Buffers[0];
+    char filemode[4] = {0};
+    strncpy(filemode, resp->mode, 3);
+
+    FILE* file = fopen(filepath, filemode);
+    int id = 0;
+    if (file) {
+        id = rand();
+        if (!id) id = rand();
+        openedFilesArray[openedFilesAmount++] = (struct FileId){id, file};
+        SERVICE_LOG("Opened file: %s, FileId: 0x%x.", filepath, id);
+    }
+    else {
+        SERVICE_LOG("Bad file: %s, errno: %d.", filepath, errno);
+        return SALTYSD_RESULT(handleService_SdcardFopen, 2);
+    }
+
+    raw = ipcPrepareHeader(c, sizeof(*raw));
+
+    raw->magic = SFCO_MAGIC;
+    raw->result = 0;
+    raw->id = id;
+
+    return 0;
+}
+
+static Result serviceSdcardFread(IpcCommand* c) {
+    if (openedFilesAmount == 0) {
+        SERVICE_LOG("No file is opened.");
+        return SALTYSD_RESULT(handleService_SdcardFread, 1);
+    }
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardFread, 4);
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardFread, 3);
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        u64 size;
+        u64 count;
+        u32 id;
+    } *resp = r.Raw;
+
+    s32 id = resp->id;
+
+    if (id == 0) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFread, 1); //File not found
+    }
+
+    FILE* file = 0;
+    size_t size = resp->size;
+    size_t count = resp->count;
+    void* addr = r.Buffers[0];
+    for (size_t i = 0; i < openedFilesAmount; i++) {
+        if (openedFilesArray[i].id == id) {
+            file = openedFilesArray[i].file;
+            break;
+        }
+    }
+
+    if (!file) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFread, 1); //File not found
+    }
+
+    size_t read = fread(addr, size, count, file);
+
+    SERVICE_LOG("FileId: 0x%lx, read: %ld B.", file, read * size);
+
+    struct {
+        u64 magic;
+        u64 result;
+        u64 count_read;
+    } *raw;
+
+    raw = ipcPrepareHeader(c, sizeof(*raw));
+
+    raw->magic = SFCO_MAGIC;
+    raw->result = 0;
+    raw->count_read = read;
+
+    return 0;
+}
+
+static Result serviceSdcardFclose(IpcCommand* c) {
+    if (openedFilesAmount == 0) {
+        SERVICE_LOG("No file is opened.");
+        return SALTYSD_RESULT(handleService_SdcardFclose, 1); //File not found
+    }
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardFclose, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        u32 id;
+    } *resp = r.Raw;
+    
+    s32 id = resp->id;
+
+    if (id == 0) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFclose, 1); //File not found
+    }
+
+    FILE* file = 0;
+    size_t i = 0;
+    for (; i < openedFilesAmount; i++) {
+        if (openedFilesArray[i].id == id) {
+            file = openedFilesArray[i].file;
+            break;
+        }
+    }
+
+    if (!file) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFclose, 1); //File not found
+    }
+
+    int result = fclose(file);
+    if (!result) {
+        memmove(&openedFilesArray[i], &openedFilesArray[i+1], sizeof(openedFilesArray[0]) * (openedFilesAmount - (i+1)));
+        memset(&openedFilesArray[FOPEN_MAX-2], 0, sizeof(openedFilesArray[0]));
+        openedFilesAmount--;
+    }
+
+    SERVICE_LOG("FileId: 0x%lx, res: %d", file, result);
+
+    return result;
+}
+
+static Result serviceSdcardFseek(IpcCommand* c) {
+    if (openedFilesAmount == 0) {
+        SERVICE_LOG("No file is opened.");
+        return SALTYSD_RESULT(handleService_SdcardFseek, 1); //File not found
+    }
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardFseek, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        s64 offset;
+        int origin;
+        u32 id;
+    } *resp = r.Raw;
+
+    u32 id = resp->id;
+
+    if (id == 0) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFseek, 1); //File not found
+    }
+
+    FILE* file = 0;
+    int origin = resp->origin;
+    long offset = resp->offset;
+
+    for (size_t i = 0; i < openedFilesAmount; i++) {
+        if (openedFilesArray[i].id == id) {
+            file = openedFilesArray[i].file;
+            break;
+        }
+    }
+
+    if (!file) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFseek, 1); //File not found
+    }
+
+    int ret = fseek(file, offset, origin);
+
+    SERVICE_LOG("FileId: 0x%lx, Offset: 0x%lx, origin: %d, ret: %d.", file, offset, origin, ret);
+
+    return ret;
+}
+
+static Result serviceSdcardFtell(IpcCommand* c) {
+    if (openedFilesAmount == 0) {
+        SERVICE_LOG("No file is opened.");
+        return SALTYSD_RESULT(handleService_SdcardFtell, 1); //File not found
+    }
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardFtell, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        s32 id;
+
+    } *resp = r.Raw;
+
+    u32 id = resp->id;
+
+    if (id == 0) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFtell, 1); //File not found
+    }
+
+    FILE* file = 0;
+    for (size_t i = 0; i < openedFilesAmount; i++) {
+        if (openedFilesArray[i].id == id) {
+            file = openedFilesArray[i].file;
+            break;
+        }
+    }
+
+    if (!file) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFtell, 1); //File not found
+    }
+
+    size_t offset = ftell(file);
+
+    SERVICE_LOG("FileId: 0x%lx, offset: 0x%lx.", file, offset);
+
+    struct {
+        u64 magic;
+        u64 result;
+        u64 offset;
+    } *raw;
+
+    raw = ipcPrepareHeader(c, sizeof(*raw));
+    raw->magic = SFCO_MAGIC;
+    raw->result = 0;
+    raw->offset = offset;
+
+    return 0;
+}
+
+static Result serviceSdcardRemove(IpcCommand* c) {
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardRemove, 4); // Buffer not received
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardRemove, 3); // This call is reserved only for Core
+    }
+
+    const char* filepath = r.Buffers[0];
+
+    int ret = remove(filepath);
+
+    SERVICE_LOG("Path: %s, ret: %d", filepath, ret);
+
+    return ret;
+}
+
+static Result serviceSdcardFwrite(IpcCommand* c) {
+    if (openedFilesAmount == 0) {
+        SERVICE_LOG("No file is opened.");
+        return SALTYSD_RESULT(handleService_SdcardFwrite, 1); //File not found
+    }
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardFwrite, 2); //Buffer not received
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardFwrite, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        u64 size;
+        u64 count;
+        u32 id;
+    } *resp = r.Raw;
+
+    s32 id = resp->id;
+
+    if (id == 0) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFwrite, 1); //File not found
+    }
+
+    FILE* file = 0;
+    size_t size = resp->size;
+    size_t count = resp->count;
+    void* addr = r.Buffers[0];
+
+    for (size_t i = 0; i < openedFilesAmount; i++) {
+        if (openedFilesArray[i].id == id) {
+            file = openedFilesArray[i].file;
+            break;
+        }
+    }
+
+    if (!file) {
+        SERVICE_LOG("File not found.");
+        return SALTYSD_RESULT(handleService_SdcardFwrite, 1); //File not found
+    }
+
+    size_t written = fwrite(addr, size, count, file);
+
+    SERVICE_LOG("FileId: 0x%lx, written: %ld B.", file, written * size);
+
+    struct {
+        u64 magic;
+        u64 result;
+        u64 count_write;
+    } *raw;
+
+    raw = ipcPrepareHeader(c, sizeof(*raw));
+
+    raw->magic = SFCO_MAGIC;
+    raw->result = 0;
+    raw->count_write = written;
+
+    return 0;
+}
+
+static Result serviceSdcardOpendir(IpcCommand* c) {
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardOpendir, 4); // Buffer not received
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardOpendir, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 result;
+        u32 id;
+    } *raw;
+
+    if (openedDirsAmount >= OPEN_MAX-1) {
+        SERVICE_LOG("Too much dirs opened at once.");
+        raw = ipcPrepareHeader(c, sizeof(*raw));
+        raw->magic = SFCO_MAGIC;
+        raw->result = SALTYSD_RESULT(handleService_SdcardOpendir, 1);
+        raw->id = 0;
+        return 0;
+    }
+
+    const char* filepath = r.Buffers[0];
+
+    DIR* dir = opendir(filepath);
+
+    int id = 0;
+    if (dir) {
+        id = rand();
+        if (!id) id = rand();
+        openedDirsArray[openedDirsAmount++] = (struct DirId){id, dir};
+        SERVICE_LOG("Opened dir: %s, DirId: 0x%x", filepath, id);
+    }
+    else {
+        SERVICE_LOG("Bad dir: %s, errno: %d.", filepath, errno);
+        return SALTYSD_RESULT(handleService_SdcardOpendir, 2); // Bad dir
+    }
+
+    raw = ipcPrepareHeader(c, sizeof(*raw));
+
+    raw->magic = SFCO_MAGIC;
+    raw->result = 0;
+    raw->id = id;
+
+    return 0;
+}
+
+static Result serviceSdcardMkdir(IpcCommand* c) {
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardMkdir, 4); // Buffer not received
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardMkdir, 3); // This call is reserved only for Core
+    }
+
+    const char* filepath = r.Buffers[0];
+
+    int ret = mkdir(filepath, 420);
+
+    SERVICE_LOG("%s, ret: %d", filepath, ret);
+
+    return ret;
+}
+
+static Result serviceSdcardReaddir(IpcCommand* c) {
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+
+    if (r.NumBuffers != 1) {
+        SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
+        return SALTYSD_RESULT(handleService_SdcardReaddir, 4); // Buffer not received
+    }
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardReaddir, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        u32 id;
+    } *resp = r.Raw;
+
+    u32 id = resp->id;
+
+    if (id == 0) {
+        SERVICE_LOG("No valid dir detected.");
+        return SALTYSD_RESULT(handleService_SdcardReaddir, 2);        
+    }
+
+    DIR* dir = 0;
+    for (size_t i = 0; i < openedDirsAmount; i++) {
+        if (openedDirsArray[i].id == id) {
+            dir = openedDirsArray[i].dir;
+            break;
+        }
+    }
+
+    if (!dir) {
+        SERVICE_LOG("No valid dir detected.");
+        return SALTYSD_RESULT(handleService_SdcardReaddir, 2);
+    }
+
+    struct dirent* data = readdir(dir);
+
+    if (!data) {
+        SERVICE_LOG("DirId: 0x%lx, errno: %d", dir, errno);
+        return SALTYSD_RESULT(handleService_SdcardReaddir, 1); // Received nullptr
+    }
+    else SERVICE_LOG("DirId: 0x%lx, no error", dir);
+
+    memcpy(r.Buffers[0], data, sizeof(struct dirent));
+
+    struct {
+        u64 magic;
+        u64 result;
+    } *raw;
+
+    raw = ipcPrepareHeader(c, sizeof(*raw));
+    raw->magic = SFCO_MAGIC;
+    raw->result = 0;
+
+    return 0;
+}
+
+static Result serviceSdcardClosedir(IpcCommand* c) {
+    if (openedDirsAmount == 0) {
+        SERVICE_LOG("No dir is opened.");
+        return SALTYSD_RESULT(handleService_SdcardClosedir, 1); //Dir not found
+    }
+
+    IpcParsedCommand r = {0};
+    ipcParse(&r);
+    if (r.HasPid != true || r.Pid != PIDnow) {
+        SERVICE_LOG("This call is reserved only for Core.");
+        return SALTYSD_RESULT(handleService_SdcardClosedir, 3); // This call is reserved only for Core
+    }
+
+    struct {
+        u64 magic;
+        u64 command;
+        u32 id;
+    } *resp = r.Raw;
+
+    u32 id = resp->id;
+
+    DIR* dir = 0;
+    size_t i = 0;
+    for (; i < openedDirsAmount; i++) {
+        if (openedDirsArray[i].id == id) {
+            dir = openedDirsArray[i].dir;
+            break;
+        }
+    }
+
+    if (!dir) {
+        SERVICE_LOG("Wrong dir.");
+        return SALTYSD_RESULT(handleService_SdcardClosedir, 1); //Dir not found
+    }
+
+    int result = closedir(dir);
+    if (!result) {
+        memmove(&openedDirsArray[i], &openedDirsArray[i+1], sizeof(openedDirsArray[0]) * (openedDirsAmount - (i+1)));
+        memset(&openedDirsArray[OPEN_MAX-2], 0, sizeof(openedDirsArray[0]));
+        openedDirsAmount--;
+    }
+
+    SERVICE_LOG("DirId: 0x%lx, res: %d", dir, result);
+
+    return result;
+}
+
+static_assert(sizeof(ino_t) == 2);
 
 static Result handleServiceCmd(int cmd)
 {
@@ -556,36 +1188,45 @@ static Result handleServiceCmd(int cmd)
     // Send reply
     IpcCommand c;
     ipcInitialize(&c);
-    ipcSendPid(&c);
 
     switch(cmd) {
         case handleService_EndSession:                                {ret = serviceEndSession(); break;}
-        case handleService_LoadELF:                                   return serviceLoadELF(&c);
+        case handleService_LoadELF:                                   {ret = serviceLoadELF(&c); if (ret) break; return 0;}
         case handleService_RestoreBootstrapCode:                      {ret = serviceRestoreBootstrapCode(); break;}
-        case handleService_Memcpy:                                    return serviceMemcpy(&c);
+        case handleService_Memcpy:                                    {ret = serviceMemcpy(&c); if (ret) break; return 0;}
         case handleService_GetSDCard:                                 {ret = serviceGetSDCard(&c); break;}
         case handleService_Log:                                       {ret = serviceLog(); break;}
-        case handleService_CheckIfSharedMemoryAvailable:              return serviceCheckIfSharedMemoryAvailable(&c);
+        case handleService_CheckIfSharedMemoryAvailable:              {ret = serviceCheckIfSharedMemoryAvailable(&c); if (ret) break; return 0;}
         case handleService_GetSharedMemoryHandle:                     {ret = serviceGetSharedMemoryHandle(&c); break;}
-        case handleService_GetBID:                                    return serviceGetBID(&c);
-        case handleService_Exception:                                 return serviceException(&c);
-        case handleService_GetDisplayRefreshRate:                     return serviceGetDisplayRefreshRate(&c);
+        case handleService_GetBID:                                    {ret = serviceGetBID(&c); if (ret) break; return 0;}
+        case handleService_Exception:                                 {ret = serviceException(&c); if (ret) break; return 0;}
+        case handleService_GetDisplayRefreshRate:                     {ret = serviceGetDisplayRefreshRate(&c); if (ret) break; return 0;}
         case handleService_SetDisplayRefreshRate:                     {ret = serviceSetDisplayRefreshRate(); break;}
         case handleService_SetDisplaySync:                            {ret = serviceSetDisplaySync(); break;}
         case handleService_SetAllowedDockedRefreshRates:              {ret = serviceSetAllowedDockedRefreshRates(); break;}
         case handleService_SetDontForce60InDocked:                    {ret = serviceSetDontForce60InDocked(); break;}
         case handleService_SetMatchLowestRR:                          {ret = serviceSetMatchLowestRR(); break;}
-        case handleService_GetDockedHighestRefreshRate:               return serviceGetDockedHighestRefreshRate(&c);
-        case handleService_IsPossiblyRetroRemake:                     return serviceIsPossiblyRetroRemake(&c);
+        case handleService_GetDockedHighestRefreshRate:               {ret = serviceGetDockedHighestRefreshRate(&c); if (ret) break; return 0;}
+        case handleService_IsPossiblyRetroRemake:                     {ret = serviceIsPossiblyRetroRemake(&c); if (ret) break; return 0;}
         case handleService_SetDisplaySyncDocked:                      {ret = serviceSetDisplaySyncDocked(); break;}
         case handleService_SetDisplaySyncRefreshRate60WhenOutOfFocus: {ret = serviceSetDisplaySyncRefreshRate60WhenOutOfFocus(); break;}
+        case handleService_SdcardFopen:                               {ret = serviceSdcardFopen(&c); if (ret) break; return 0;}
+        case handleService_SdcardFread:                               {ret = serviceSdcardFread(&c); if (ret) break; return 0;}
+        case handleService_SdcardFclose:                              {ret = serviceSdcardFclose(&c); break;}
+        case handleService_SdcardFseek:                               {ret = serviceSdcardFseek(&c); break;}
+        case handleService_SdcardFtell:                               {ret = serviceSdcardFtell(&c); if (ret) break; return 0;}
+        case handleService_SdcardRemove:                              {ret = serviceSdcardRemove(&c); break;}
+        case handleService_SdcardFwrite:                              {ret = serviceSdcardFwrite(&c); if (ret) break; return 0;}
+        case handleService_SdcardOpendir:                             {ret = serviceSdcardOpendir(&c); if (ret) break; return 0;}
+        case handleService_SdcardMkdir:                               {ret = serviceSdcardMkdir(&c); break;}
+        case handleService_SdcardReaddir:                             {ret = serviceSdcardReaddir(&c); if (ret) break; return 0;}
+        case handleService_SdcardClosedir:                            {ret = serviceSdcardClosedir(&c); if (ret) break; return 0;}
         default: ret = 0xEE01;
     }
     
     struct {
         u64 magic;
         u64 result;
-        u64 reserved[2];
     } *raw;
 
     raw = ipcPrepareHeader(&c, sizeof(*raw));

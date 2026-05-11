@@ -6,10 +6,52 @@
 #include "saltysd_core.h"
 #include "useful.h"
 #include "nanoprintf.h"
+#include <errno.h>
 
 Handle saltysd;
 
-void SaltySD_Init()
+#if defined(_DIRENT_HAVE_D_NAMLEN) || defined(_DIRENT_HAVE_D_RECLEN) || defined(_DIRENT_HAVE_D_OFF)
+#error "Wrong DIR structure detected!"
+#endif
+#if !defined(_DIRENT_HAVE_D_TYPE)
+#error "Wrong DIR structure detected!"
+#endif
+
+typedef enum {
+    handleService_EndSession,
+    handleService_LoadELF,
+    handleService_RestoreBootstrapCode,
+    handleService_Memcpy,
+    handleService_GetSDCard,
+    handleService_Log,
+    handleService_CheckIfSharedMemoryAvailable,
+    handleService_GetSharedMemoryHandle,
+    handleService_GetBID,
+    handleService_Exception,
+    handleService_GetDisplayRefreshRate,
+    handleService_SetDisplayRefreshRate,
+    handleService_SetDisplaySync,
+    handleService_SetAllowedDockedRefreshRates,
+    handleService_SetDontForce60InDocked,
+    handleService_SetMatchLowestRR,
+    handleService_GetDockedHighestRefreshRate,
+    handleService_IsPossiblyRetroRemake,
+    handleService_SetDisplaySyncDocked,
+    handleService_SetDisplaySyncRefreshRate60WhenOutOfFocus,
+    handleService_SdcardFopen,
+    handleService_SdcardFread,
+    handleService_SdcardFclose,
+    handleService_SdcardFseek,
+    handleService_SdcardFtell,
+    handleService_SdcardRemove,
+    handleService_SdcardFwrite,
+    handleService_SdcardOpendir,
+    handleService_SdcardMkdir,
+    handleService_SdcardReaddir,
+    handleService_SdcardClosedir
+} handleService;
+
+Result SaltySD_Init()
 {
 	Result ret;
 
@@ -20,6 +62,8 @@ void SaltySD_Init()
 		
 		if (!ret) break;
 	}
+
+	return ret;
 	
 	//debug_log("SaltySD Core: Got handle %x\n", saltysd);
 }
@@ -55,7 +99,7 @@ Result SaltySD_Term()
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 0;
+	raw->cmd_id = handleService_EndSession;
 	raw->zero = 0;
 
 	ret = ipcDispatch(saltysd);
@@ -98,7 +142,7 @@ Result SaltySD_Restore()
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 2;
+	raw->cmd_id = handleService_RestoreBootstrapCode;
 	raw->zero = 0;
 
 	ret = ipcDispatch(saltysd);
@@ -142,7 +186,7 @@ Result SaltySD_LoadELF(u64 heap, u64* elf_addr, u64* elf_size, char* name)
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 1;
+	raw->cmd_id = handleService_LoadELF;
 	raw->heap = heap;
 	strncpy(raw->name, name, 63);
 
@@ -190,7 +234,7 @@ Result SaltySD_Memcpy(uintptr_t to, uintptr_t from, size_t size)
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 3;
+	raw->cmd_id = handleService_Memcpy;
 	raw->from = from;
 	raw->to = to;
 	raw->size = size;
@@ -231,7 +275,7 @@ Result SaltySD_Exception()
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 9;
+	raw->cmd_id = handleService_Exception;
 
 	ret = ipcDispatch(saltysd);
 
@@ -270,7 +314,7 @@ Result SaltySD_GetSDCard(Handle *retrieve)
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 4;
+	raw->cmd_id = handleService_GetSDCard;
 
 	ret = ipcDispatch(saltysd);
 
@@ -303,45 +347,6 @@ Result SaltySD_GetSDCard(Handle *retrieve)
 	return ret;
 }
 
-Result SaltySD_print(char* out)
-{
-	Result ret;
-	IpcCommand c;
-
-	ipcInitialize(&c);
-
-	struct 
-	{
-		u64 magic;
-		u64 cmd_id;
-		char log[65];
-		u64 reserved[2];
-	} *raw;
-
-	raw = ipcPrepareHeader(&c, sizeof(*raw));
-
-	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 5;
-	strncpy(raw->log, out, 64);
-
-	ret = ipcDispatch(saltysd);
-
-	if (R_SUCCEEDED(ret)) 
-	{
-		IpcParsedCommand r;
-		ipcParse(&r);
-
-		struct respond {
-			u64 magic;
-			u64 result;
-		} *resp = (struct respond*)r.Raw;
-
-		ret = resp->result;
-	}
-
-	return ret;
-}
-
 Result SaltySD_CheckIfSharedMemoryAvailable(ptrdiff_t *new_offset, size_t new_size)
 {
 	Result ret = 0;
@@ -361,7 +366,7 @@ Result SaltySD_CheckIfSharedMemoryAvailable(ptrdiff_t *new_offset, size_t new_si
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 6;
+	raw->cmd_id = handleService_CheckIfSharedMemoryAvailable;
 	raw->size = new_size;
 
 	ret = ipcDispatch(saltysd);
@@ -407,7 +412,7 @@ Result SaltySD_GetSharedMemoryHandle(Handle *retrieve)
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 7;
+	raw->cmd_id = handleService_GetSharedMemoryHandle;
 
 	ret = ipcDispatch(saltysd);
 
@@ -443,24 +448,36 @@ Result SaltySD_printf(const char* format, ...)
 	npf_vsnprintf(tmp, 256, format, args);
 	va_end(args);
 	
-	int i = 0;
-	while(i < strlen(tmp)) {
-		ret = SaltySD_print(tmp + i);
-		i += 64;
+	IpcCommand c;
 
-		if (ret) {
-			i = 0;
-			break;
-		}
-	}
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddSendBuffer(&c, tmp, strlen(tmp) + 1, BufferType_Normal);
 
-	if (ret)
-	{	
-		#if defined(SWITCH32) || defined(OUNCE32)
-		debug_log("SaltySD Core: failed w/ error %lx, msg: %s", ret, tmp);
-		#else
-		debug_log("SaltySD Core: failed w/ error %x, msg: %s", ret, tmp);
-		#endif
+	struct 
+	{
+		u64 magic;
+		u64 cmd_id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = 5;
+
+	ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) 
+	{
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct respond {
+			u64 magic;
+			u64 result;
+		} *resp = (struct respond*)r.Raw;
+
+		ret = resp->result;
 	}
 
 	return ret;
@@ -484,7 +501,7 @@ u64 SaltySD_GetBID()
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 8;
+	raw->cmd_id = handleService_GetBID;
 
 	ret = ipcDispatch(saltysd);
 
@@ -534,7 +551,7 @@ Result SaltySD_SetDisplaySyncDocked(bool isTrue)
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 18;
+	raw->cmd_id = handleService_SetDisplaySyncDocked;
 	raw->value = isTrue;
 
 	ret = ipcDispatch(saltysd);
@@ -574,7 +591,7 @@ Result SaltySD_SetDisplaySync(bool isTrue)
 	raw = ipcPrepareHeader(&c, sizeof(*raw));
 
 	raw->magic = SFCI_MAGIC;
-	raw->cmd_id = 12;
+	raw->cmd_id = handleService_SetDisplaySync;
 	raw->value = isTrue;
 
 	ret = ipcDispatch(saltysd);
@@ -593,4 +610,446 @@ Result SaltySD_SetDisplaySync(bool isTrue)
 	}
 	
 	return ret;
+}
+
+
+FILE* SaltySDCore_fopen(const char* filename, const char* mode)
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddSendBuffer(&c, filename, strlen(filename) + 1, BufferType_Normal);	
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+		char mode[4];
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardFopen;
+	memset(raw->mode, 0, 4);
+	strncpy(raw->mode, mode, 3);
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+			u32 id;
+		} *resp = (struct output*)r.Raw;
+
+		u64 ret = resp->result;
+		if (!ret) return (FILE*)(uintptr_t)resp->id;
+	}
+
+	return nullptr;
+}
+
+size_t SaltySDCore_fread(void* ptr, size_t size, size_t count, FILE* stream)
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddRecvBuffer(&c, ptr, size * count, BufferType_Normal);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+		u64 size;
+		u64 count;
+		u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardFread;
+	raw->id = (u64)stream;
+	raw->size = size;
+	raw->count = count;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+			u64 count_read;
+		} *resp = (struct output*)r.Raw;
+
+		u64 ret = resp->result;
+		size_t count_read = (size_t)resp->count_read;
+		if (!ret) return count_read;
+	}
+
+	return 0;
+}
+
+int SaltySDCore_fclose(FILE* stream)
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+		u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardFclose;
+	raw->id = (u32)(uintptr_t)stream;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+		} *resp = (struct output*)r.Raw;
+
+		return (int)resp->result;
+	}
+
+	return EOF;
+}
+
+int SaltySDCore_fseek(FILE* stream, int64_t offset, int origin)
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+        s64 offset;
+        int origin;
+        u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardFseek;
+	raw->offset = offset;
+	raw->origin = origin;
+	raw->id = (u32)(uintptr_t)stream;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+		} *resp = (struct output*)r.Raw;
+
+		return (int)resp->result;
+	}
+
+	return EOF;
+}
+
+size_t SaltySDCore_ftell(FILE* stream) {
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+        u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardFtell;
+	raw->id = (u32)(uintptr_t)stream;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+			u64 offset;
+		} *resp = (struct output*)r.Raw;
+
+		u64 ret = resp->result;
+		size_t offset = (size_t)resp->offset;
+		if (!ret) return offset;
+	}
+
+	return -1;
+}
+
+int SaltySDCore_remove(const char* filename) {
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddSendBuffer(&c, filename, strlen(filename) + 1, BufferType_Normal);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardRemove;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+		} *resp = (struct output*)r.Raw;
+
+		return (int)resp->result;
+	}
+
+	return 1;
+}
+
+size_t SaltySDCore_fwrite(const void* ptr, size_t size, size_t count, FILE* stream) 
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddSendBuffer(&c, ptr, size * count, BufferType_Normal);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+		u64 size;
+		u64 count;
+		u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardFwrite;
+	raw->id = (u32)(uintptr_t)stream;
+	raw->size = size;
+	raw->count = count;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+			u64 count_write;
+		} *resp = (struct output*)r.Raw;
+
+		u64 ret = resp->result;
+		size_t count_write = (size_t)resp->count_write;
+		if (!ret) return count_write;
+	}
+
+	return 0;
+}
+
+DIR* SaltySDCore_opendir(const char* dirname)
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddSendBuffer(&c, dirname, strlen(dirname) + 1, BufferType_Normal);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardOpendir;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+			u32 id;
+		} *resp = (struct output*)r.Raw;
+
+		u64 ret = resp->result;
+		if (!ret) return (DIR*)(uintptr_t)resp->id;
+	}
+
+	return nullptr;
+}
+
+int SaltySDCore_mkdir(const char* dirname, mode_t mode)
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddSendBuffer(&c, dirname, strlen(dirname) + 1, BufferType_Normal);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardMkdir;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+		} *resp = (struct output*)r.Raw;
+
+		return (int)resp->result;
+	}
+
+	return 1;
+}
+
+#if defined(SWITCH) || defined(OUNCE)
+static_assert(sizeof(ino_t) == 2);
+#endif
+
+struct dirent output = {0};
+
+struct dirent* SaltySDCore_readdir(DIR* dirp)
+{
+
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+	ipcAddRecvBuffer(&c, &output, sizeof(output), BufferType_Normal);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+		u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardReaddir;
+	raw->id = (u32)(uintptr_t)dirp;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+		} *resp = (struct output*)r.Raw;
+
+		u64 ret = resp->result;
+		if (!ret) {
+			#if defined(SWITCH32) || defined(OUNCE32)
+			struct direntSalty {
+				uint16_t	   d_ino;
+				unsigned char  d_type;
+				char	       d_name[NAME_MAX+1];
+			};
+			struct direntSalty* dir = (struct direntSalty*)&output;
+			memmove(&output.d_name, dir->d_name, NAME_MAX+1);
+			output.d_type = dir->d_type;
+			output.d_ino = dir->d_ino;
+			#endif
+			return &output;
+		}
+	}
+	return nullptr;
+}
+
+int SaltySDCore_closedir(DIR *dirp) 
+{
+	// Send a command
+	IpcCommand c;
+	ipcInitialize(&c);
+	ipcSendPid(&c);
+
+	struct input {
+		u64 magic;
+		u64 cmd_id;
+		u32 id;
+	} *raw;
+
+	raw = ipcPrepareHeader(&c, sizeof(*raw));
+
+	raw->magic = SFCI_MAGIC;
+	raw->cmd_id = handleService_SdcardClosedir;
+	raw->id = (u32)(uintptr_t)dirp;
+
+	Result ret = ipcDispatch(saltysd);
+
+	if (R_SUCCEEDED(ret)) {
+		IpcParsedCommand r;
+		ipcParse(&r);
+
+		struct output {
+			u64 magic;
+			u64 result;
+		} *resp = (struct output*)r.Raw;
+
+		return (int)resp->result;
+	}
+
+	return 1;
 }
