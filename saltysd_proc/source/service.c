@@ -377,13 +377,6 @@ static Result serviceException(IpcCommand* c) {
     } *raw;
 
     return exception;
-
-    raw = ipcPrepareHeader(c, sizeof(*raw));
-
-    raw->magic = SFCO_MAGIC;
-    raw->result = exception;
-
-    return 0;
 }
 
 static Result serviceGetDisplayRefreshRate(IpcCommand* c) {
