@@ -117,7 +117,6 @@ Result __nx_nv_create_tmem(TransferMemory *t, u32 *out_size, Permission perm) {
 }
 
 u64 TIDnow;
-u64 PIDnow;
 u64 BIDnow;
 
 static bool isServiceRunning(const char *serviceName) {	
@@ -489,7 +488,6 @@ int main(int argc, char *argv[])
         // Detected new PID
         if (max != old_max && max > 0x80)
         {
-            PIDnow = max;
             hijack_pid(max);
         }
         

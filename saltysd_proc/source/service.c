@@ -82,7 +82,7 @@ static Result serviceLoadELF(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_LoadELF, 3); // This call is reserved only for Core
     }
@@ -171,7 +171,7 @@ static Result serviceRestoreBootstrapCode() {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_RestoreBootstrapCode, 3); //// This call is reserved only for Core
     }
@@ -196,7 +196,7 @@ static Result serviceMemcpy(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_Memcpy, 3); // This call is reserved only for Core
     }
@@ -252,7 +252,7 @@ static Result serviceGetSDCard(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.HasPid != true || r.Pid != PIDnow) return SALTYSD_RESULT(handleService_GetSDCard, 3); // This call is reserved only for Core
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) return SALTYSD_RESULT(handleService_GetSDCard, 3); // This call is reserved only for Core
 
     //ipcSendHandleCopy(c, sdcard);
 
@@ -265,7 +265,7 @@ static Result serviceLog() {
     ipcParse(&r);
 
     if (r.NumBuffers != 1) return SALTYSD_RESULT(handleService_Log, 4); // Buffer not received
-    if (r.HasPid != true || r.Pid != PIDnow) return SALTYSD_RESULT(handleService_Log, 3); //// This call is reserved only for Core
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) return SALTYSD_RESULT(handleService_Log, 3); //// This call is reserved only for Core
 
     const char* log = r.Buffers[0];
 
@@ -344,12 +344,12 @@ static Result serviceGetBID(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_GetBID, 3); // This call is reserved only for Core
     }
 
-    SERVICE_LOG("PID: %ld", PIDnow);
+    SERVICE_LOG("PID: %ld", (u64)lastAppPID);
 
     struct {
         u64 magic;
@@ -596,7 +596,7 @@ static Result serviceSdcardFopen(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardFopen, 4);
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardFopen, 3);
     }
@@ -660,7 +660,7 @@ static Result serviceSdcardFread(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardFread, 4);
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardFread, 3);
     }
@@ -723,7 +723,7 @@ static Result serviceSdcardFclose(IpcCommand* c) {
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardFclose, 3); // This call is reserved only for Core
     }
@@ -775,7 +775,7 @@ static Result serviceSdcardFseek(IpcCommand* c) {
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardFseek, 3); // This call is reserved only for Core
     }
@@ -826,7 +826,7 @@ static Result serviceSdcardFtell(IpcCommand* c) {
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardFtell, 3); // This call is reserved only for Core
     }
@@ -885,7 +885,7 @@ static Result serviceSdcardRemove(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardRemove, 4); // Buffer not received
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardRemove, 3); // This call is reserved only for Core
     }
@@ -911,7 +911,7 @@ static Result serviceSdcardFwrite(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardFwrite, 2); //Buffer not received
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardFwrite, 3); // This call is reserved only for Core
     }
@@ -976,7 +976,7 @@ static Result serviceSdcardOpendir(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardOpendir, 4); // Buffer not received
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardOpendir, 3); // This call is reserved only for Core
     }
@@ -1030,7 +1030,7 @@ static Result serviceSdcardMkdir(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardMkdir, 4); // Buffer not received
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardMkdir, 3); // This call is reserved only for Core
     }
@@ -1053,7 +1053,7 @@ static Result serviceSdcardReaddir(IpcCommand* c) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
         return SALTYSD_RESULT(handleService_SdcardReaddir, 4); // Buffer not received
     }
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardReaddir, 3); // This call is reserved only for Core
     }
@@ -1114,7 +1114,7 @@ static Result serviceSdcardClosedir(IpcCommand* c) {
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
-    if (r.HasPid != true || r.Pid != PIDnow) {
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
         return SALTYSD_RESULT(handleService_SdcardClosedir, 3); // This call is reserved only for Core
     }

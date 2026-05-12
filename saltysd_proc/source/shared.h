@@ -9,7 +9,6 @@ extern Handle saltyport;
 extern size_t shmem_size;
 extern size_t reservedSharedMemory;
 extern SharedMemory _sharedMemory;
-extern u64 PIDnow;
 extern u64 BIDnow;
 extern u64 TIDnow;
 extern u64 exception;
