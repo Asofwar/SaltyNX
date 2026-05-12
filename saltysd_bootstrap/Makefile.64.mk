@@ -43,7 +43,7 @@ ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft
 
 ASFLAGS :=  $(ARCH)
 
-CFLAGS	:=	-g -Wall -O3 \
+CFLAGS	:=	-g -Wall -Werror -O3 \
 			-ffast-math -ffunction-sections -fdata-sections \
 			$(ARCH) $(DEFINES)
 
