@@ -776,15 +776,21 @@ void swkbdInlineMakeAppearArg(SwkbdAppearArg* arg, SwkbdType type) {
 }
 
 void swkbdInlineAppearArgSetOkButtonText(SwkbdAppearArg* arg,  const char* str) {
-    _swkbdConvertToUTF16ByteSize(arg->okButtonText, str, sizeof(arg->okButtonText));
+    u16 okButtonText[9];
+    _swkbdConvertToUTF16ByteSize(okButtonText, str, sizeof(arg->okButtonText));
+    memcpy(arg->okButtonText, okButtonText, sizeof(okButtonText));
 }
 
 void swkbdInlineAppearArgSetLeftButtonText(SwkbdAppearArg* arg, const char* str) {
-    _swkbdConvertToUTF16(&arg->leftButtonText, str, 1);
+    u16 leftButtonText;
+    _swkbdConvertToUTF16(&leftButtonText, str, 1);
+    arg->leftButtonText = leftButtonText;
 }
 
 void swkbdInlineAppearArgSetRightButtonText(SwkbdAppearArg* arg, const char* str) {
-    _swkbdConvertToUTF16(&arg->rightButtonText, str, 1);
+    u16 rightButtonText;
+    _swkbdConvertToUTF16(&rightButtonText, str, 1);
+    arg->rightButtonText = rightButtonText;
 }
 
 void swkbdInlineSetVolume(SwkbdInline* s, float volume) {
@@ -794,7 +800,9 @@ void swkbdInlineSetVolume(SwkbdInline* s, float volume) {
 }
 
 void swkbdInlineSetInputText(SwkbdInline* s, const char* str) {
-    _swkbdConvertToUTF16ByteSize(s->calcArg.inputText, str, sizeof(s->calcArg.inputText));
+    u16 inputText[0x3f4/2];
+    _swkbdConvertToUTF16ByteSize(inputText, str, sizeof(s->calcArg.inputText));
+    memcpy(s->calcArg.inputText, inputText, sizeof(inputText));
     s->calcArg.flags |= 0x8;
 }
 

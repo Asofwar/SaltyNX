@@ -247,7 +247,11 @@ Result errorApplicationCreate(ErrorApplicationConfig* c, const char* dialog_mess
 
     if (hosversionBefore(5,0,0)) {
         rc = setInitialize();
-        if (R_SUCCEEDED(rc)) rc = setMakeLanguageCode(SetLanguage_ENUS, &c->arg.languageCode);
+        if (R_SUCCEEDED(rc)) {
+            u64 tmp;
+            rc = setMakeLanguageCode(SetLanguage_ENUS, &tmp);
+            if (R_SUCCEEDED(rc)) c->arg.languageCode = tmp;
+        }
         setExit();
     }
 
