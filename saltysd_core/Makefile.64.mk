@@ -43,7 +43,7 @@ EXEFS_SRC	:=	exefs_src
 #---------------------------------------------------------------------------------
 ARCH	    :=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -fno-plt
 
-CFLAGS	:=	-Wall -O2 \
+CFLAGS	:=	-Wall -Werror -O2 \
 			-ffast-math -ffunction-sections -fdata-sections \
 			$(ARCH) $(DEFINES)
 
