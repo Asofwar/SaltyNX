@@ -33,7 +33,7 @@ include $(TOPDIR)/../version.mk
 
 TARGET		:=	saltysd_core
 BUILD		:=	build
-SOURCES		:=	source source/tinyexpr
+SOURCES		:=	source source/tinyexpr source/crt0
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
