@@ -129,7 +129,7 @@ typedef struct {
  */
 static inline void ipcAddSendBuffer(IpcCommand* cmd, const void* buffer, size_t size, BufferType type) {
     size_t off = cmd->NumSend;
-    cmd->Buffers[off] = (u64)buffer;
+    cmd->Buffers[off] = (uintptr_t)buffer;
     cmd->BufferSizes[off] = size;
     cmd->BufferTypes[off] = type;
     cmd->NumSend++;
@@ -144,7 +144,7 @@ static inline void ipcAddSendBuffer(IpcCommand* cmd, const void* buffer, size_t 
  */
 static inline void ipcAddRecvBuffer(IpcCommand* cmd, void* buffer, size_t size, BufferType type) {
     size_t off = cmd->NumSend + cmd->NumRecv;
-    cmd->Buffers[off] = (u64)buffer;
+    cmd->Buffers[off] = (uintptr_t)buffer;
     cmd->BufferSizes[off] = size;
     cmd->BufferTypes[off] = type;
     cmd->NumRecv++;
@@ -159,7 +159,7 @@ static inline void ipcAddRecvBuffer(IpcCommand* cmd, void* buffer, size_t size, 
  */
 static inline void ipcAddExchBuffer(IpcCommand* cmd, void* buffer, size_t size, BufferType type) {
     size_t off = cmd->NumSend + cmd->NumRecv + cmd->NumExch;
-    cmd->Buffers[off] = (u64)buffer;
+    cmd->Buffers[off] = (uintptr_t)buffer;
     cmd->BufferSizes[off] = size;
     cmd->BufferTypes[off] = type;
     cmd->NumExch++;
@@ -174,7 +174,7 @@ static inline void ipcAddExchBuffer(IpcCommand* cmd, void* buffer, size_t size, 
  */
 static inline void ipcAddSendStatic(IpcCommand* cmd, const void* buffer, size_t size, u8 index) {
     size_t off = cmd->NumStaticIn;
-    cmd->Statics[off] = (u64)buffer;
+    cmd->Statics[off] = (uintptr_t)buffer;
     cmd->StaticSizes[off] = size;
     cmd->StaticIndices[off] = index;
     cmd->NumStaticIn++;
@@ -189,7 +189,7 @@ static inline void ipcAddSendStatic(IpcCommand* cmd, const void* buffer, size_t 
  */
 static inline void ipcAddRecvStatic(IpcCommand* cmd, void* buffer, size_t size, u8 index) {
     size_t off = cmd->NumStaticIn + cmd->NumStaticOut;
-    cmd->Statics[off] = (u64)buffer;
+    cmd->Statics[off] = (uintptr_t)buffer;
     cmd->StaticSizes[off] = size;
     cmd->StaticIndices[off] = index;
     cmd->NumStaticOut++;
