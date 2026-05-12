@@ -104,7 +104,7 @@ uintptr_t SaltySDCore_GetSymbolAddr(void* base, const char* name)
 	{
 		if (!strcmp(strtab + symtab[i].st_name, name) && symtab[i].st_value)
 		{
-			return (uint64_t)base + symtab[i].st_value;
+			return (uintptr_t)base + symtab[i].st_value;
 		}
 	}
 

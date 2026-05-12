@@ -682,7 +682,7 @@ size_t SaltySDCore_fread(void* ptr, size_t size, size_t count, FILE* stream)
 
 	raw->magic = SFCI_MAGIC;
 	raw->cmd_id = handleService_SdcardFread;
-	raw->id = (u64)stream;
+	raw->id = (uintptr_t)stream;
 	raw->size = size;
 	raw->count = count;
 
