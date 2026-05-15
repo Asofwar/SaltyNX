@@ -32,7 +32,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 include $(TOPDIR)/../version.mk
 
 APP_NAME    :=  SaltyNX
-TARGET		:=	saltysd_proc
+TARGET		:=	saltynx_proc
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data

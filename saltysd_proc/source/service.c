@@ -10,9 +10,9 @@
 #include <errno.h>
 
 #define SERVICE_LOG(fmt, ...) \
-    SaltySD_printf(APP_NAME ": [%s] " fmt "\n", __func__, ##__VA_ARGS__)
+    SaltyNX_printf(APP_NAME ": [%s] " fmt "\n", __func__, ##__VA_ARGS__)
 
-#define SALTYSD_RESULT(id, val) MAKERESULT(MODULE_SALTYSD, 9000 + ((id) * 10) + (val))
+#define SALTYNX_RESULT(id, val) MAKERESULT(MODULE_SALTYNX, 9000 + ((id) * 10) + (val))
 
 #if defined(_DIRENT_HAVE_D_NAMLEN) || defined(_DIRENT_HAVE_D_RECLEN) || defined(_DIRENT_HAVE_D_OFF)
 #error "Wrong DIR structure detected!"
@@ -84,7 +84,7 @@ static Result serviceLoadELF(IpcCommand* c) {
 
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_LoadELF, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_LoadELF, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -106,7 +106,7 @@ static Result serviceLoadELF(IpcCommand* c) {
     char* path = malloc(96);
     u32 elf_size = 0;
     bool arm32 = false;
-    if (!strncmp(name, "saltysd_core32.elf", 18)) arm32 = true;
+    if (!strncmp(name, "saltynx_core32.elf", 18)) arm32 = true;
 
     npf_snprintf(path, 96, "sdmc:/SaltySD/plugins/%s", name);
     FILE* f = fopen(path, "rb");
@@ -139,7 +139,7 @@ static Result serviceLoadELF(IpcCommand* c) {
         if (ret) SERVICE_LOG("Load_elf arm32: %d, ret: 0x%x", arm32, ret);
     }
     else
-        ret = SALTYSD_RESULT(handleService_LoadELF, 1);
+        ret = SALTYNX_RESULT(handleService_LoadELF, 1);
 
     svcCloseHandle(proc);
     
@@ -173,7 +173,7 @@ static Result serviceRestoreBootstrapCode() {
 
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_RestoreBootstrapCode, 3); //// This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_RestoreBootstrapCode, 3); //// This call is reserved only for Core
     }
 
     SERVICE_LOG();
@@ -198,7 +198,7 @@ static Result serviceMemcpy(IpcCommand* c) {
 
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_Memcpy, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_Memcpy, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -252,24 +252,24 @@ static Result serviceGetSDCard(IpcCommand* c) {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.HasPid != true || r.Pid != (u64)lastAppPID) return SALTYSD_RESULT(handleService_GetSDCard, 3); // This call is reserved only for Core
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) return SALTYNX_RESULT(handleService_GetSDCard, 3); // This call is reserved only for Core
 
     //ipcSendHandleCopy(c, sdcard);
 
     //return 0;
-    return SALTYSD_RESULT(handleService_GetSDCard, 1);
+    return SALTYNX_RESULT(handleService_GetSDCard, 1);
 }
 
 static Result serviceLog() {
     IpcParsedCommand r = {0};
     ipcParse(&r);
 
-    if (r.NumBuffers != 1) return SALTYSD_RESULT(handleService_Log, 4); // Buffer not received
-    if (r.HasPid != true || r.Pid != (u64)lastAppPID) return SALTYSD_RESULT(handleService_Log, 3); //// This call is reserved only for Core
+    if (r.NumBuffers != 1) return SALTYNX_RESULT(handleService_Log, 4); // Buffer not received
+    if (r.HasPid != true || r.Pid != (u64)lastAppPID) return SALTYNX_RESULT(handleService_Log, 3); //// This call is reserved only for Core
 
     const char* log = r.Buffers[0];
 
-    SaltySD_printf(APP_NAME ": [log] %s", log);
+    SaltyNX_printf(APP_NAME ": [log] %s", log);
 
     return 0;
 }
@@ -346,7 +346,7 @@ static Result serviceGetBID(IpcCommand* c) {
 
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_GetBID, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_GetBID, 3); // This call is reserved only for Core
     }
 
     SERVICE_LOG("PID: %ld", (u64)lastAppPID);
@@ -407,7 +407,7 @@ static Result serviceSetDisplayRefreshRate() {
         refreshRate = refreshRate_temp;
         ret = 0;
     }
-    else ret = SALTYSD_RESULT(handleService_SetDisplayRefreshRate, 1);
+    else ret = SALTYNX_RESULT(handleService_SetDisplayRefreshRate, 1);
     SERVICE_LOG("refresh rate requested: %d, ret: 0x%x", refreshRate_temp, ret);
     return ret;
 }
@@ -594,11 +594,11 @@ static Result serviceSdcardFopen(IpcCommand* c) {
 
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardFopen, 4);
+        return SALTYNX_RESULT(handleService_SdcardFopen, 4);
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardFopen, 3);
+        return SALTYNX_RESULT(handleService_SdcardFopen, 3);
     }
 
     struct {
@@ -617,7 +617,7 @@ static Result serviceSdcardFopen(IpcCommand* c) {
         SERVICE_LOG("Too much files opened at once.");
         raw = ipcPrepareHeader(c, sizeof(*raw));
         raw->magic = SFCO_MAGIC;
-        raw->result = SALTYSD_RESULT(handleService_SdcardFopen, 1);
+        raw->result = SALTYNX_RESULT(handleService_SdcardFopen, 1);
         raw->id = 0;
         return 0;
     }
@@ -636,7 +636,7 @@ static Result serviceSdcardFopen(IpcCommand* c) {
     }
     else {
         SERVICE_LOG("Bad file: %s, errno: %d.", filepath, errno);
-        return SALTYSD_RESULT(handleService_SdcardFopen, 2);
+        return SALTYNX_RESULT(handleService_SdcardFopen, 2);
     }
 
     raw = ipcPrepareHeader(c, sizeof(*raw));
@@ -651,18 +651,18 @@ static Result serviceSdcardFopen(IpcCommand* c) {
 static Result serviceSdcardFread(IpcCommand* c) {
     if (openedFilesAmount == 0) {
         SERVICE_LOG("No file is opened.");
-        return SALTYSD_RESULT(handleService_SdcardFread, 1);
+        return SALTYNX_RESULT(handleService_SdcardFread, 1);
     }
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardFread, 4);
+        return SALTYNX_RESULT(handleService_SdcardFread, 4);
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardFread, 3);
+        return SALTYNX_RESULT(handleService_SdcardFread, 3);
     }
 
     struct {
@@ -677,7 +677,7 @@ static Result serviceSdcardFread(IpcCommand* c) {
 
     if (id == 0) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFread, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFread, 1); //File not found
     }
 
     FILE* file = 0;
@@ -693,7 +693,7 @@ static Result serviceSdcardFread(IpcCommand* c) {
 
     if (!file) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFread, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFread, 1); //File not found
     }
 
     size_t read = fread(addr, size, count, file);
@@ -718,14 +718,14 @@ static Result serviceSdcardFread(IpcCommand* c) {
 static Result serviceSdcardFclose(IpcCommand* c) {
     if (openedFilesAmount == 0) {
         SERVICE_LOG("No file is opened.");
-        return SALTYSD_RESULT(handleService_SdcardFclose, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFclose, 1); //File not found
     }
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardFclose, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardFclose, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -738,7 +738,7 @@ static Result serviceSdcardFclose(IpcCommand* c) {
 
     if (id == 0) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFclose, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFclose, 1); //File not found
     }
 
     FILE* file = 0;
@@ -752,7 +752,7 @@ static Result serviceSdcardFclose(IpcCommand* c) {
 
     if (!file) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFclose, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFclose, 1); //File not found
     }
 
     int result = fclose(file);
@@ -770,14 +770,14 @@ static Result serviceSdcardFclose(IpcCommand* c) {
 static Result serviceSdcardFseek(IpcCommand* c) {
     if (openedFilesAmount == 0) {
         SERVICE_LOG("No file is opened.");
-        return SALTYSD_RESULT(handleService_SdcardFseek, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFseek, 1); //File not found
     }
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardFseek, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardFseek, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -792,7 +792,7 @@ static Result serviceSdcardFseek(IpcCommand* c) {
 
     if (id == 0) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFseek, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFseek, 1); //File not found
     }
 
     FILE* file = 0;
@@ -808,7 +808,7 @@ static Result serviceSdcardFseek(IpcCommand* c) {
 
     if (!file) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFseek, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFseek, 1); //File not found
     }
 
     int ret = fseek(file, offset, origin);
@@ -821,14 +821,14 @@ static Result serviceSdcardFseek(IpcCommand* c) {
 static Result serviceSdcardFtell(IpcCommand* c) {
     if (openedFilesAmount == 0) {
         SERVICE_LOG("No file is opened.");
-        return SALTYSD_RESULT(handleService_SdcardFtell, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFtell, 1); //File not found
     }
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardFtell, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardFtell, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -842,7 +842,7 @@ static Result serviceSdcardFtell(IpcCommand* c) {
 
     if (id == 0) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFtell, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFtell, 1); //File not found
     }
 
     FILE* file = 0;
@@ -855,7 +855,7 @@ static Result serviceSdcardFtell(IpcCommand* c) {
 
     if (!file) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFtell, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFtell, 1); //File not found
     }
 
     size_t offset = ftell(file);
@@ -883,11 +883,11 @@ static Result serviceSdcardRemove(IpcCommand* c) {
 
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardRemove, 4); // Buffer not received
+        return SALTYNX_RESULT(handleService_SdcardRemove, 4); // Buffer not received
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardRemove, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardRemove, 3); // This call is reserved only for Core
     }
 
     const char* filepath = r.Buffers[0];
@@ -902,18 +902,18 @@ static Result serviceSdcardRemove(IpcCommand* c) {
 static Result serviceSdcardFwrite(IpcCommand* c) {
     if (openedFilesAmount == 0) {
         SERVICE_LOG("No file is opened.");
-        return SALTYSD_RESULT(handleService_SdcardFwrite, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFwrite, 1); //File not found
     }
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardFwrite, 2); //Buffer not received
+        return SALTYNX_RESULT(handleService_SdcardFwrite, 2); //Buffer not received
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardFwrite, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardFwrite, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -928,7 +928,7 @@ static Result serviceSdcardFwrite(IpcCommand* c) {
 
     if (id == 0) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFwrite, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFwrite, 1); //File not found
     }
 
     FILE* file = 0;
@@ -945,7 +945,7 @@ static Result serviceSdcardFwrite(IpcCommand* c) {
 
     if (!file) {
         SERVICE_LOG("File not found.");
-        return SALTYSD_RESULT(handleService_SdcardFwrite, 1); //File not found
+        return SALTYNX_RESULT(handleService_SdcardFwrite, 1); //File not found
     }
 
     size_t written = fwrite(addr, size, count, file);
@@ -974,11 +974,11 @@ static Result serviceSdcardOpendir(IpcCommand* c) {
 
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardOpendir, 4); // Buffer not received
+        return SALTYNX_RESULT(handleService_SdcardOpendir, 4); // Buffer not received
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardOpendir, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardOpendir, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -991,7 +991,7 @@ static Result serviceSdcardOpendir(IpcCommand* c) {
         SERVICE_LOG("Too much dirs opened at once.");
         raw = ipcPrepareHeader(c, sizeof(*raw));
         raw->magic = SFCO_MAGIC;
-        raw->result = SALTYSD_RESULT(handleService_SdcardOpendir, 1);
+        raw->result = SALTYNX_RESULT(handleService_SdcardOpendir, 1);
         raw->id = 0;
         return 0;
     }
@@ -1009,7 +1009,7 @@ static Result serviceSdcardOpendir(IpcCommand* c) {
     }
     else {
         SERVICE_LOG("Bad dir: %s, errno: %d.", filepath, errno);
-        return SALTYSD_RESULT(handleService_SdcardOpendir, 2); // Bad dir
+        return SALTYNX_RESULT(handleService_SdcardOpendir, 2); // Bad dir
     }
 
     raw = ipcPrepareHeader(c, sizeof(*raw));
@@ -1028,11 +1028,11 @@ static Result serviceSdcardMkdir(IpcCommand* c) {
 
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardMkdir, 4); // Buffer not received
+        return SALTYNX_RESULT(handleService_SdcardMkdir, 4); // Buffer not received
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardMkdir, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardMkdir, 3); // This call is reserved only for Core
     }
 
     const char* filepath = r.Buffers[0];
@@ -1051,11 +1051,11 @@ static Result serviceSdcardReaddir(IpcCommand* c) {
 
     if (r.NumBuffers != 1) {
         SERVICE_LOG("Buffers received: %d.", r.NumBuffers);
-        return SALTYSD_RESULT(handleService_SdcardReaddir, 4); // Buffer not received
+        return SALTYNX_RESULT(handleService_SdcardReaddir, 4); // Buffer not received
     }
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardReaddir, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardReaddir, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -1068,7 +1068,7 @@ static Result serviceSdcardReaddir(IpcCommand* c) {
 
     if (id == 0) {
         SERVICE_LOG("No valid dir detected.");
-        return SALTYSD_RESULT(handleService_SdcardReaddir, 2);        
+        return SALTYNX_RESULT(handleService_SdcardReaddir, 2);        
     }
 
     DIR* dir = 0;
@@ -1081,14 +1081,14 @@ static Result serviceSdcardReaddir(IpcCommand* c) {
 
     if (!dir) {
         SERVICE_LOG("No valid dir detected.");
-        return SALTYSD_RESULT(handleService_SdcardReaddir, 2);
+        return SALTYNX_RESULT(handleService_SdcardReaddir, 2);
     }
 
     struct dirent* data = readdir(dir);
 
     if (!data) {
         SERVICE_LOG("DirId: 0x%lx, errno: %d", dir, errno);
-        return SALTYSD_RESULT(handleService_SdcardReaddir, 1); // Received nullptr
+        return SALTYNX_RESULT(handleService_SdcardReaddir, 1); // Received nullptr
     }
     else SERVICE_LOG("DirId: 0x%lx, no error", dir);
 
@@ -1109,14 +1109,14 @@ static Result serviceSdcardReaddir(IpcCommand* c) {
 static Result serviceSdcardClosedir(IpcCommand* c) {
     if (openedDirsAmount == 0) {
         SERVICE_LOG("No dir is opened.");
-        return SALTYSD_RESULT(handleService_SdcardClosedir, 1); //Dir not found
+        return SALTYNX_RESULT(handleService_SdcardClosedir, 1); //Dir not found
     }
 
     IpcParsedCommand r = {0};
     ipcParse(&r);
     if (r.HasPid != true || r.Pid != (u64)lastAppPID) {
         SERVICE_LOG("This call is reserved only for Core.");
-        return SALTYSD_RESULT(handleService_SdcardClosedir, 3); // This call is reserved only for Core
+        return SALTYNX_RESULT(handleService_SdcardClosedir, 3); // This call is reserved only for Core
     }
 
     struct {
@@ -1138,7 +1138,7 @@ static Result serviceSdcardClosedir(IpcCommand* c) {
 
     if (!dir) {
         SERVICE_LOG("Wrong dir.");
-        return SALTYSD_RESULT(handleService_SdcardClosedir, 1); //Dir not found
+        return SALTYNX_RESULT(handleService_SdcardClosedir, 1); //Dir not found
     }
 
     int result = closedir(dir);
@@ -1214,7 +1214,7 @@ static Result handleServiceCmd(int cmd)
 void serviceThread()
 {
     Result ret;
-    SaltySD_printf(APP_NAME ": accepting service calls\n");
+    SaltyNX_printf(APP_NAME ": accepting service calls\n");
     should_terminate = false;
 
     while (1)
@@ -1223,11 +1223,11 @@ void serviceThread()
         ret = svcAcceptSession(&session, saltyport);
         if (ret && ret != 0xf201)
         {
-            SaltySD_printf(APP_NAME ": svcAcceptSession returned %x\n", ret);
+            SaltyNX_printf(APP_NAME ": svcAcceptSession returned %x\n", ret);
         }
         else if (!ret)
         {
-            SaltySD_printf(APP_NAME ": session %x being handled\n", session);
+            SaltyNX_printf(APP_NAME ": session %x being handled\n", session);
 
             int handle_index;
             Handle replySession = 0;
@@ -1267,5 +1267,5 @@ void serviceThread()
         svcSleepThread(1000*1000*100);
     }
     
-    SaltySD_printf(APP_NAME ": done accepting service calls\n");
+    SaltyNX_printf(APP_NAME ": done accepting service calls\n");
 }

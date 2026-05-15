@@ -1,6 +1,6 @@
 #include <switch.h>
 
-#define MODULE_SALTYSD 420
+#define MODULE_SALTYNX 420
 
 extern bool should_terminate;
 extern bool already_hijacking;

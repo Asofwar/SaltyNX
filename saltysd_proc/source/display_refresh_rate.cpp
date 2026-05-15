@@ -234,7 +234,7 @@ void getDockedHighestRefreshRate(uint32_t fd_in) {
     uint8_t highestRefreshRate = 60;
     uint32_t fd = fd_in;
     if (!fd && R_FAILED(nvOpen(&fd, "/dev/nvdisp-disp1"))) {
-        SaltySD_printf(APP_NAME ": Couldn't open /dev/nvdisp-disp1! Blocking to 60 Hz.\n");
+        SaltyNX_printf(APP_NAME ": Couldn't open /dev/nvdisp-disp1! Blocking to 60 Hz.\n");
         dockedHighestRefreshRate = 60;
         return;
     }
@@ -251,7 +251,7 @@ void getDockedHighestRefreshRate(uint32_t fd_in) {
         }
     }
     else {
-        SaltySD_printf(APP_NAME ": NVDISP_GET_MODE_DB2 for /dev/nvdisp-disp1 returned error 0x%x!\n", nvrc);
+        SaltyNX_printf(APP_NAME ": NVDISP_GET_MODE_DB2 for /dev/nvdisp-disp1 returned error 0x%x!\n", nvrc);
         dockedHighestRefreshRate = 60;
     }
     if (highestRefreshRate > DockedModeRefreshRateAllowedValues[sizeof(DockedModeRefreshRateAllowedValues) - 1]) 
@@ -259,7 +259,7 @@ void getDockedHighestRefreshRate(uint32_t fd_in) {
     struct nvdcMode2 DISPLAY_B = {0};
     nvrc = nvIoctl(fd, NVDISP_GET_MODE2, &DISPLAY_B);
     if (R_FAILED(nvrc)) {
-        SaltySD_printf(APP_NAME ": NVDISP_GET_MODE2 for /dev/nvdisp-disp1 returned error 0x%x!\n", nvrc);
+        SaltyNX_printf(APP_NAME ": NVDISP_GET_MODE2 for /dev/nvdisp-disp1 returned error 0x%x!\n", nvrc);
     }
     struct dpaux_read_0x100 dpaux = {6, 0x100, 0x10};
     nvrc = nvIoctl(fd, NVDISP_GET_PANEL_DATA, &dpaux);
@@ -271,7 +271,7 @@ void getDockedHighestRefreshRate(uint32_t fd_in) {
                 highestRefreshRate = 75;
         }
     }
-    else SaltySD_printf(APP_NAME ": NVDISP_GET_PANEL_DATA for /dev/nvdisp-disp1 returned error 0x%x!\n", nvrc);
+    else SaltyNX_printf(APP_NAME ": NVDISP_GET_PANEL_DATA for /dev/nvdisp-disp1 returned error 0x%x!\n", nvrc);
     if (!fd_in) nvClose(fd);
     dockedHighestRefreshRate = highestRefreshRate;
 }
@@ -373,7 +373,7 @@ void LoadDockedModeAllowedSave() {
     if (isLite)
         return;
     if (R_FAILED(setsysGetEdid(&edid))) {
-        SaltySD_printf(APP_NAME ": Couldn't retrieve display EDID! Locking allowed refresh rates in docked mode to 50 and 60 Hz.\n");
+        SaltyNX_printf(APP_NAME ": Couldn't retrieve display EDID! Locking allowed refresh rates in docked mode to 50 and 60 Hz.\n");
         return;
     }
     char path[128] = "";
@@ -385,13 +385,13 @@ void LoadDockedModeAllowedSave() {
             fwrite(&edid, sizeof(edid), 1, file);
             fclose(file);
         }
-        else SaltySD_printf(APP_NAME ": Couldn't dump EDID to sdcard!\n");
+        else SaltyNX_printf(APP_NAME ": Couldn't dump EDID to sdcard!\n");
     }
     npf_snprintf(path, sizeof(path), "sdmc:/SaltySD/plugins/FPSLocker/ExtDisplays/%08X.ini", crc32);
     if (file_or_directory_exists(path) == true) {
         FILE* file = fopen(path, "r");
         if (!file) {
-            SaltySD_printf(APP_NAME ": %s opening failed (file already opened?). Locking allowed refresh rates in docked mode to 50 and 60 Hz.\n", &path[31]);
+            SaltyNX_printf(APP_NAME ": %s opening failed (file already opened?). Locking allowed refresh rates in docked mode to 50 and 60 Hz.\n", &path[31]);
             return;
         }
         fseek(file, 0, 2);
@@ -399,26 +399,26 @@ void LoadDockedModeAllowedSave() {
         fseek(file, 0, 0);
         char* temp_string = (char*)malloc(size);
         if (!temp_string) {
-            SaltySD_printf(APP_NAME ": Allocation failure! Memory leak. Get ready for crash.\n");
+            SaltyNX_printf(APP_NAME ": Allocation failure! Memory leak. Get ready for crash.\n");
         }
         fread(temp_string, size, 1, file);
         fclose(file);
         remove_spaces(temp_string, temp_string);
         if (memcmp(temp_string, "[Common]", 8)) {
-            SaltySD_printf(APP_NAME ": %s doesn't start with \"[Common]\"! Using default settings!\n", &path[31]);
+            SaltyNX_printf(APP_NAME ": %s doesn't start with \"[Common]\"! Using default settings!\n", &path[31]);
             free(temp_string);
             return;
         }
         char* substring = strstr(temp_string, "refreshRateAllowed={");
         if (substring == NULL) {
-            SaltySD_printf(APP_NAME ": %s doesn't have \"refreshRateAllowed\"! Using default settings!\n", &path[31]);
+            SaltyNX_printf(APP_NAME ": %s doesn't have \"refreshRateAllowed\"! Using default settings!\n", &path[31]);
             free(temp_string);
             return;
         }
         char* rr_start = &substring[strlen("refreshRateAllowed={")];
         substring = strstr(rr_start, "}");
         if (substring == NULL) {
-            SaltySD_printf(APP_NAME ": %s \"refreshRateAllowed\" is malformed! Using default settings!\n", &path[31]);
+            SaltyNX_printf(APP_NAME ": %s \"refreshRateAllowed\" is malformed! Using default settings!\n", &path[31]);
             free(temp_string);
             return;
         }
@@ -444,29 +444,29 @@ void LoadDockedModeAllowedSave() {
             substring = &substring[strlen("allowPatchesToForce60InDocked=")];
             dontForce60InDocked = (bool)!strncasecmp(substring, "False", 5);
         }
-        else SaltySD_printf(APP_NAME ": %s doesn't have \"allowPatchesToForce60InDocked\"! Setting to true!\n", &path[31]);
+        else SaltyNX_printf(APP_NAME ": %s doesn't have \"allowPatchesToForce60InDocked\"! Setting to true!\n", &path[31]);
         substring = strstr(temp_string, "matchLowestRefreshRate=");
         if (substring != NULL) {
             substring = &substring[strlen("matchLowestRefreshRate=")];
             matchLowestDocked = (bool)!strncasecmp(substring, "True", 4);
         }
-        else SaltySD_printf(APP_NAME ": %s doesn't have \"matchLowestRefreshRate\"! Setting to false!\n", &path[31]);
+        else SaltyNX_printf(APP_NAME ": %s doesn't have \"matchLowestRefreshRate\"! Setting to false!\n", &path[31]);
         substring = strstr(temp_string, "bringDefaultRefreshRateWhenOutOfFocus=");
         if (substring != NULL) {
             substring = &substring[strlen("bringDefaultRefreshRateWhenOutOfFocus=")];
             displaySyncDockedOutOfFocus60 = (bool)!strncasecmp(substring, "True", 4);
         }
-        else SaltySD_printf(APP_NAME ": %s doesn't have \"bringDefaultRefreshRateWhenOutOfFocus=\"! Setting to false!\n", &path[31]);
+        else SaltyNX_printf(APP_NAME ": %s doesn't have \"bringDefaultRefreshRateWhenOutOfFocus=\"! Setting to false!\n", &path[31]);
         substring = strstr(temp_string, "refreshRateAllowed720p={");
         if (substring == NULL) {
-            SaltySD_printf(APP_NAME ": %s doesn't have \"refreshRateAllowed720p\"! Using default settings!\n", &path[31]);
+            SaltyNX_printf(APP_NAME ": %s doesn't have \"refreshRateAllowed720p\"! Using default settings!\n", &path[31]);
             free(temp_string);
             return;
         }
         rr_start = &substring[strlen("refreshRateAllowed720p={")];
         substring = strstr(rr_start, "}");
         if (substring == NULL) {
-            SaltySD_printf(APP_NAME ": %s \"refreshRateAllowed720p\" is malformed! Using default settings!\n", &path[31]);
+            SaltyNX_printf(APP_NAME ": %s \"refreshRateAllowed720p\" is malformed! Using default settings!\n", &path[31]);
             free(temp_string);
             return;
         }
@@ -490,7 +490,7 @@ void LoadDockedModeAllowedSave() {
         free(temp_string);
     }
     else {
-        SaltySD_printf(APP_NAME ": File \"%s\" not found! Locking allowed refresh rates in docked mode to 50 and 60 Hz.\n", path);
+        SaltyNX_printf(APP_NAME ": File \"%s\" not found! Locking allowed refresh rates in docked mode to 50 and 60 Hz.\n", path);
     }
 }
 
@@ -585,7 +585,7 @@ bool setNvDispDockedRefreshRate(uint32_t new_refreshRate) {
     struct nvdcMode2 DISPLAY_B = {0};
     Result nvrc = nvIoctl(fd, NVDISP_GET_MODE2, &DISPLAY_B);
     if (R_FAILED(nvrc)) {
-        SaltySD_printf(APP_NAME ": NVDISP_GET_MODE2 failed! rc: 0x%x\n", nvrc);
+        SaltyNX_printf(APP_NAME ": NVDISP_GET_MODE2 failed! rc: 0x%x\n", nvrc);
         nvClose(fd);
         return false;
     }
@@ -676,10 +676,10 @@ bool setNvDispDockedRefreshRate(uint32_t new_refreshRate) {
         nvrc = nvIoctl(fd, NVDISP_VALIDATE_MODE2, &DISPLAY_B);
         if (R_SUCCEEDED(nvrc)) {
             nvrc = nvIoctl(fd, NVDISP_SET_MODE2, &DISPLAY_B);
-            if (R_FAILED(nvrc)) SaltySD_printf(APP_NAME ": NVDISP_SET_MODE2 failed! rc: 0x%x\n", nvrc);
+            if (R_FAILED(nvrc)) SaltyNX_printf(APP_NAME ": NVDISP_SET_MODE2 failed! rc: 0x%x\n", nvrc);
             else if (nx_fps) nx_fps->currentRefreshRate = DockedModeRefreshRateAllowedValues[itr];
         }
-        else SaltySD_printf(APP_NAME ": NVDISP_VALIDATE_MODE2 failed! rc: 0x%x, pclkKHz: %d, Hz: %d\n", nvrc, clock, DockedModeRefreshRateAllowedValues[itr]);
+        else SaltyNX_printf(APP_NAME ": NVDISP_VALIDATE_MODE2 failed! rc: 0x%x, pclkKHz: %d, Hz: %d\n", nvrc, clock, DockedModeRefreshRateAllowedValues[itr]);
     }
     nvClose(fd);
     return true;
@@ -698,13 +698,13 @@ bool setNvDispHandheldRefreshRate(uint32_t new_refreshRate) {
     svcSleepThread(1000000000);
     uint32_t fd = 0;
     if (R_FAILED(nvOpen(&fd, "/dev/nvdisp-disp0"))) {
-        SaltySD_printf(APP_NAME ": Couldn't open nvdisp-disp0 for Retro Remake!\n");
+        SaltyNX_printf(APP_NAME ": Couldn't open nvdisp-disp0 for Retro Remake!\n");
         return false;
     }
     struct nvdcMode2 DISPLAY_B = {0};
     Result nvrc = nvIoctl(fd, NVDISP_GET_MODE2, &DISPLAY_B);
     if (R_FAILED(nvrc)) {
-        SaltySD_printf(APP_NAME ": NVDISP_GET_MODE2 failed! rc: 0x%x\n", nvrc);
+        SaltyNX_printf(APP_NAME ": NVDISP_GET_MODE2 failed! rc: 0x%x\n", nvrc);
         nvClose(fd);
         return false;
     }
@@ -763,10 +763,10 @@ bool setNvDispHandheldRefreshRate(uint32_t new_refreshRate) {
         for (size_t i = 0; i < 5; i++) {
             nvrc = nvIoctl(fd, NVDISP_SET_MODE2, &DISPLAY_B);
         }
-        if (R_FAILED(nvrc)) SaltySD_printf(APP_NAME ": NVDISP_SET_MODE2 failed! rc: 0x%x\n", nvrc);
+        if (R_FAILED(nvrc)) SaltyNX_printf(APP_NAME ": NVDISP_SET_MODE2 failed! rc: 0x%x\n", nvrc);
         else if (nx_fps) nx_fps->currentRefreshRate = new_refreshRate;
     }
-    else SaltySD_printf(APP_NAME ": NVDISP_VALIDATE_MODE2 failed! rc: 0x%x, pclkKHz: %d, Hz: %d\n", nvrc, DISPLAY_B.pclkKHz, new_refreshRate);
+    else SaltyNX_printf(APP_NAME ": NVDISP_VALIDATE_MODE2 failed! rc: 0x%x, pclkKHz: %d, Hz: %d\n", nvrc, DISPLAY_B.pclkKHz, new_refreshRate);
     nvClose(fd);
     return true;
 }

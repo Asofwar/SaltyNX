@@ -225,7 +225,7 @@ void Elf32_parser::relocate(uint32_t text_addr, uint32_t data_addr, uint32_t rea
 	uint32_t data_offset = 0;
 	uint32_t read_offset = 0;
 	for (auto seg: segs) {
-		SaltySD_printf("Segment %s, flags: %s, addr: %p, vaddr: %x\n", seg.segment_type.c_str(), seg.segment_flags.c_str(), seg.data, seg.phdr -> p_vaddr);
+		SaltyNX_printf("Segment %s, flags: %s, addr: %p, vaddr: %x\n", seg.segment_type.c_str(), seg.segment_flags.c_str(), seg.data, seg.phdr -> p_vaddr);
 		if (!RX_segment && seg.segment_flags == "RE") {
 			RX_segment = seg.data;
 		}
@@ -266,6 +266,6 @@ void Elf32_parser::relocate(uint32_t text_addr, uint32_t data_addr, uint32_t rea
 				*(uint32_t*)(RX_segment + rel.rel->r_offset) += text_addr;
 			}
 		}
-		else SaltySD_printf("32bit UNK_REL: 0x%x\n", type);
+		else SaltyNX_printf("32bit UNK_REL: 0x%x\n", type);
 	}
 }

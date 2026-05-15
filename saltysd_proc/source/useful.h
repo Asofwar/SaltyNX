@@ -84,7 +84,7 @@ static inline bool file_or_directory_exists(const char *filename)
     return stat(filename, &buffer) == 0 ? true : false;
 }
 
-static inline void SaltySD_printf(const char* format, ...)
+static inline void SaltyNX_printf(const char* format, ...)
 {
 	if (file_or_directory_exists("sdmc:/SaltySD/flags/log.flag") == false) return;
 	
