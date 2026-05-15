@@ -31,7 +31,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 include $(TOPDIR)/../version.mk
 
-TARGET		:=	saltysd_core
+MODULE_NAME :=  "SaltyNX Core"
+TARGET		:=	saltynx_core
 BUILD		:=	build
 SOURCES		:=	source source/tinyexpr source/crt0
 DATA		:=	data
@@ -47,7 +48,7 @@ CFLAGS	:=	-Wall -Werror -O2 \
 			-ffast-math -ffunction-sections -fdata-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -DSWITCH -DAPP_VERSION=\"$(VERSION)\"
+CFLAGS	+=	$(INCLUDE) -DSWITCH -DAPP_VERSION=\"$(VERSION)\" -DMODULE_NAME=\"$(MODULE_NAME)\"
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++23
 

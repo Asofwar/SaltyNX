@@ -34,7 +34,8 @@ ARMV6K_SYSLIB := $(DEVKITARM)/arm-none-eabi/lib/armv6k/fpu
 #---------------------------------------------------------------------------------
 include $(TOPDIR)/../version.mk
 
-TARGET		:=	saltysd_core32
+MODULE_NAME :=  "SaltyNX Core32"
+TARGET		:=	saltynx_core32
 BUILD		:=	build32
 SOURCES		:=	source source/tinyexpr
 DATA		:=	data
@@ -50,7 +51,7 @@ CFLAGS			:=	-Wall -Werror -O2 \
 					-ffast-math -ffunction-sections -fdata-sections \
 					$(ARCH) $(DEFINES)
 
-CFLAGS			+=	$(INCLUDE) -DSWITCH32 -DAPP_VERSION=\"$(VERSION)\"
+CFLAGS			+=	$(INCLUDE) -DSWITCH32 -DAPP_VERSION=\"$(VERSION)\" -DMODULE_NAME=\"$(MODULE_NAME)\"
 
 CXXFLAGS		:=	$(CFLAGS) -fno-exceptions -fno-rtti -std=gnu++23
 

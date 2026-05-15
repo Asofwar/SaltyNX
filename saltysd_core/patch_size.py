@@ -1,4 +1,4 @@
-file = open("saltysd_core.elf", "rb")
+file = open("saltynx_core.elf", "rb")
 DATA = file.read()
 file.close()
 
@@ -14,6 +14,6 @@ if (deadbeef == -1):
 encoded_size = size.to_bytes(8, "little")
 NEW_DATA = DATA.replace(deadbeef_bytes, encoded_size)
 
-file = open("saltysd_core.elf", "wb")
+file = open("saltynx_core.elf", "wb")
 file.write(NEW_DATA)
 file.close()

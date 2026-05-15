@@ -252,7 +252,7 @@ Result svcSetHeapSizeIntercept(uintptr_t *out, size_t size)
 	size_t addon = ((elf_area_size+0x1FFFFF) & ~0x1FFFFF);
 	Result ret = svcSetHeapSize((void*)out, size+addon);
 	
-	//SaltySDCore_printf("SaltySD Core: svcSetHeapSize intercept %x %llx %llx\n", ret, *out, size+((elf_area_size+0x200000) & 0xffe00000));
+	//SaltySDCore_printf(MODULE_NAME ": svcSetHeapSize intercept %x %llx %llx\n", ret, *out, size+((elf_area_size+0x200000) & 0xffe00000));
 	
 	if (!ret)
 	{
@@ -267,7 +267,7 @@ Result svcGetInfoIntercept (u64 *out, size_t id0, Handle handle, u64 id1)
 
 	Result ret = svcGetInfo(out, id0, handle, id1);	
 
-	//SaltySDCore_printf("SaltySD Core: svcGetInfo intercept %p (%llx) %llx %x %llx ret %x\n", out, *out, id0, handle, id1, ret);	
+	//SaltySDCore_printf(MODULE_NAME ": svcGetInfo intercept %p (%llx) %llx %x %llx ret %x\n", out, *out, id0, handle, id1, ret);	
 
 	if (id1 == 0 && handle == CUR_PROCESS_HANDLE)	
 	{	
@@ -300,7 +300,7 @@ void SaltySDCore_PatchSVCs()
 	
 	if (!dst_1 || !dst_2)
 	{
-		SaltySDCore_printf("SaltySD Core: Failed to find svcSetHeapSize or svcGetInfo!\n");
+		SaltySDCore_printf(MODULE_NAME ": Failed to find svcSetHeapSize or svcGetInfo!\n");
 		return;
 	}
 
@@ -322,18 +322,18 @@ void SaltySDCore_PatchSVCs()
 	
 	if (!dst_1)
 	{
-		SaltySDCore_printf("SaltySD Core: Failed to find svcSetHeapSize!\n");
+		SaltySDCore_printf(MODULE_NAME ": Failed to find svcSetHeapSize!\n");
 		return;
 	}
 	else {
-		SaltySDCore_printf("SaltySD Core: Found svcSetHeapSize at address: 0x%lx!\n", dst_1);
+		SaltySDCore_printf(MODULE_NAME ": Found svcSetHeapSize at address: 0x%lx!\n", dst_1);
 	}
 	if (!dst_2) {
-		SaltySDCore_printf("SaltySD Core: Failed to find svcGetInfo!\n");
+		SaltySDCore_printf(MODULE_NAME ": Failed to find svcGetInfo!\n");
 		return;		
 	}
 	else {
-		SaltySDCore_printf("SaltySD Core: Found svcGetInfo at address: 0x%lx!\n", dst_2);
+		SaltySDCore_printf(MODULE_NAME ": Found svcGetInfo at address: 0x%lx!\n", dst_2);
 	}
 
 	*(u64*)&patch[8] = (u64)svcSetHeapSizeIntercept;
@@ -349,7 +349,7 @@ void** SaltySDCore_LoadPluginsInDir(char* path, void** entries, size_t* num_elfs
 	DIR *d;
 	struct dirent *dir;
 
-	SaltySDCore_printf("SaltySD Core: Searching plugin dir `%s'...\n", path);
+	SaltySDCore_printf(MODULE_NAME ": Searching plugin dir `%s'...\n", path);
 	
 	npf_snprintf(tmp, 0x100, "sdmc:/SaltySD/plugins/%s", path);
 
@@ -399,7 +399,7 @@ void SaltySDCore_LoadPlugins()
 	}
 	free(tmp3);
 	if (num_elfs) free(entries);
-	else SaltySDCore_printf("SaltySD Core: Plugins not detected...\n");
+	else SaltySDCore_printf(MODULE_NAME ": Plugins not detected...\n");
 	
 	return;
 }
@@ -449,11 +449,7 @@ int main(int argc, char *argv[])
 	ret = SaltySD_Init();
 	if (ret) goto fail;
 
-	#if defined(SWITCH32) || defined(OUNCE32)
-	SaltySDCore_printf("SaltySD Core32 " APP_VERSION ": restoring code...\n");
-	#else
-	SaltySDCore_printf("SaltySD Core " APP_VERSION ": restoring code...\n");
-	#endif
+	SaltySDCore_printf(MODULE_NAME " " APP_VERSION ": restoring code...\n");
 	ret = SaltySD_Restore();
 	if (ret) goto fail;
 
@@ -464,11 +460,11 @@ int main(int argc, char *argv[])
 	SaltySDCore_ReplaceImport("_ZN2nn2ro10LoadModuleEPNS0_6ModuleEPKvPvmi", (void*)LoadModule);
 	
 	#if defined(SWITCH32) || defined(OUNCE32)
-	SaltySDCore_printf("SaltySD Core32: Plugins are not supported...\n");
+	SaltySDCore_printf(MODULE_NAME ": Plugins are not supported...\n");
 	#else
 	Result exc = SaltySD_Exception();
 	if (exc == 0x0) SaltySDCore_LoadPlugins();
-	else SaltySDCore_printf("SaltySD Core: Detected exception title, aborting loading plugins...\n");
+	else SaltySDCore_printf(MODULE_NAME ": Detected exception title, aborting loading plugins...\n");
 	#endif
 
 	ptrdiff_t SMO = -1;
@@ -487,13 +483,13 @@ int main(int argc, char *argv[])
 			ReverseNX(&_sharedmemory, &sharedOperationMode);
 
 			if (SaltySDCore_isRelrAvailable()) {
-				SaltySDCore_printf("SaltySD Core: Game is using RELR. Applying hacky solution.\n", ret);
+				SaltySDCore_printf(MODULE_NAME ": Game is using RELR. Applying hacky solution.\n", ret);
 				Address_weak_QueryMemoryInfo = SaltySDCore_FindSymbolBuiltin("_ZN2nn2os15QueryMemoryInfoEPNS0_10MemoryInfoE");
 				SaltySDCore_ReplaceImport("_ZN2nn2os15QueryMemoryInfoEPNS0_10MemoryInfoE", (void*)QueryMemoryInfo);
 			}
 		}
 		else {
-			SaltySDCore_printf("SaltySD Core: shmemMap failed: 0x%lX\n", shmemMapRc);
+			SaltySDCore_printf(MODULE_NAME ": shmemMap failed: 0x%lX\n", shmemMapRc);
 		}
 	}
 
@@ -505,10 +501,10 @@ int main(int argc, char *argv[])
 
 fail:
 	#if defined(SWITCH32) || defined(OUNCE32)
-	debug_log("SaltySD Core: failed with retcode %lx\n", ret);
+	debug_log(MODULE_NAME ": failed with retcode %lx\n", ret);
 	#else
-	debug_log("SaltySD Core: failed with retcode %x\n", ret);
+	debug_log(MODULE_NAME ": failed with retcode %x\n", ret);
 	#endif
-	SaltySDCore_printf("SaltySD Core: failed with retcode %lx\n", ret);
+	SaltySDCore_printf(MODULE_NAME ": failed with retcode %lx\n", ret);
 	__libnx_exit(0);
 }

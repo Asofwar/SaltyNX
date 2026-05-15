@@ -70,7 +70,7 @@ Result SaltySD_Init()
 
 	return ret;
 	
-	//debug_log("SaltySD Core: Got handle %x\n", saltysd);
+	//debug_log(MODULE_NAME ": Got handle %x\n", saltysd);
 }
 
 Result SaltySD_Term()
@@ -120,7 +120,7 @@ Result SaltySD_Deinit()
 {
 	Result ret;
 
-	//debug_log("SaltySD Core: terminating\n");
+	//debug_log(MODULE_NAME ": terminating\n");
 	ret = SaltySD_Term();
 	if (ret) return ret;
 
@@ -349,7 +349,7 @@ Result SaltySD_GetSDCard(Handle *retrieve)
 			int dev = fsdevMountDevice("sdmc", sdcardfs);
 			setDefaultDevice(dev);
 
-			SaltySDCore_printf("SaltySD Core: got SD card handle %x\n", r.Handles[0]);
+			SaltySDCore_printf(MODULE_NAME ": got SD card handle %x\n", r.Handles[0]);
 		}
 	}
 	
@@ -439,7 +439,7 @@ Result SaltySD_GetSharedMemoryHandle(Handle *retrieve)
 		
 		if (!ret)
 		{
-			SaltySDCore_printf("SaltySD Core: got SharedMemory handle %x\n", r.Handles[0]);
+			SaltySDCore_printf(MODULE_NAME ": got SharedMemory handle %x\n", r.Handles[0]);
 			*retrieve = r.Handles[0];
 		}
 	}
@@ -527,14 +527,14 @@ u64 SaltySD_GetBID()
 		uint64_t rett = resp->result;
 		if (rett) {
 			#if defined(SWITCH32) || defined(OUNCE32)
-			SaltySDCore_printf("SaltySD Core: BID: %016llX\n", rett);
+			SaltySDCore_printf(MODULE_NAME ": BID: %016llX\n", rett);
 			#else
-			SaltySDCore_printf("SaltySD Core: BID: %016lX\n", rett);
+			SaltySDCore_printf(MODULE_NAME ": BID: %016lX\n", rett);
 			#endif
 			return rett;
 		}
 		else {
-			SaltySDCore_printf("SaltySD Core: getBID failed!\n");
+			SaltySDCore_printf(MODULE_NAME ": getBID failed!\n");
 			return 0;
 		}
 	}

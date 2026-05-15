@@ -262,7 +262,7 @@ void SaltySDCore_ReplaceModuleImport(void* base, const char* name, void* newfunc
 		char* rel_name = strtab + symtab[sym_idx].st_name;
 		if (strcmp(name, rel_name)) continue;
 		#if defined(SWITCH32) || defined(OUNCE32)
-		SaltySDCore_printf("SaltySD Core: %x %x %x %s to %p, %p + %x = %p\n", symtab[sym_idx].st_value, (uint32_t)rela - (uint32_t)base, rela_idx, rel_name, newfunc, base, rela->r_offset, base + rela->r_offset);
+		SaltySDCore_printf(MODULE_NAME ": %x %x %x %s to %p, %p + %x = %p\n", symtab[sym_idx].st_value, (uint32_t)rela - (uint32_t)base, rela_idx, rel_name, newfunc, base, rela->r_offset, base + rela->r_offset);
 		Elf32_Rel replacement;
 		replacement.r_offset = rela->r_offset;
 		replacement.r_info = 0x17;
@@ -271,7 +271,7 @@ void SaltySDCore_ReplaceModuleImport(void* base, const char* name, void* newfunc
 		*(void**)(base + rela->r_offset) = newfunc;
 
 		#else
-		SaltySDCore_printf("SaltySD Core: %x %s to 0x%lx, %lx 0x%lx\n", rela_idx, rel_name, newfunc, rela->r_offset, base + rela->r_offset);
+		SaltySDCore_printf(MODULE_NAME ": %x %s to 0x%lx, %lx 0x%lx\n", rela_idx, rel_name, newfunc, rela->r_offset, base + rela->r_offset);
 		
 		if (!update) {
 			Elf64_Rela replacement = *rela;
@@ -386,7 +386,7 @@ void SaltySDCore_DynamicLinkModule(void* base)
 
 		uint32_t sym_val_and_addend = sym_val + 0;
 
-		SaltySDCore_printf("SaltySD Core: %x 0x%lx->0x%lx %s\n", sym_idx, symtab[sym_idx].st_value + 0, sym_val_and_addend, name);
+		SaltySDCore_printf(MODULE_NAME ": %x 0x%lx->0x%lx %s\n", sym_idx, symtab[sym_idx].st_value + 0, sym_val_and_addend, name);
 
 		switch (ELF32_R_TYPE(rel->r_info))
 		{
@@ -422,7 +422,7 @@ void SaltySDCore_DynamicLinkModule(void* base)
 
 		uint64_t sym_val_and_addend = sym_val + rela->r_addend;
 
-		SaltySDCore_printf("SaltySD Core: %x 0x%lx->0x%lx %s\n", sym_idx, symtab[sym_idx].st_value + rela->r_addend, sym_val_and_addend, name);
+		SaltySDCore_printf(MODULE_NAME ": %x 0x%lx->0x%lx %s\n", sym_idx, symtab[sym_idx].st_value + rela->r_addend, sym_val_and_addend, name);
 
 		switch (ELF64_R_TYPE(rela->r_info))
 		{

@@ -23,9 +23,9 @@ void SaltySDCore_printf(const char* format, ...)
 	va_end(args);
 	
 	#if defined(SWITCH32) || defined(OUNCE32)
-	FILE* f = SaltySDCore_fopen("sdmc:/SaltySD/saltysd_core32.log", "ab");	
+	FILE* f = SaltySDCore_fopen("sdmc:/SaltySD/saltynx_core32.log", "ab");	
 	#else
-	FILE* f = SaltySDCore_fopen("sdmc:/SaltySD/saltysd_core.log", "ab");
+	FILE* f = SaltySDCore_fopen("sdmc:/SaltySD/saltynx_core.log", "ab");
 	#endif
 	if (f)
 	{
