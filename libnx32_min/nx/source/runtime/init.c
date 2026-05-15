@@ -3,10 +3,8 @@
 #include "runtime/hosversion.h"
 #include "services/sm.h"
 #include "services/fatal.h"
-#include "services/hid.h"
 #include "services/time.h"
 #include "services/applet.h"
-#include "services/set.h"
 
 void* __stack_top;
 void NORETURN __nx_exit(Result rc, LoaderReturnFn retaddr);
