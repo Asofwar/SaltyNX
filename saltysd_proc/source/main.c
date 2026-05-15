@@ -414,7 +414,7 @@ void Initialize() {
 
     // Start our port
     // For some reason, we only have one session maximum (0 reslimit handle related?)	
-    svcManageNamedPort(&saltyport, APP_NAME "", 1);
+    svcManageNamedPort(&saltyport, "SaltySD", 1);
     svcManageNamedPort(&injectserv, "InjectServ", 1);
 
     uint64_t dummy = 0;
