@@ -29,7 +29,7 @@ include $(TOPDIR)/rel_rules
 #	 - icon.jpg
 #	 - <libnx folder>/default_icon.jpg
 #---------------------------------------------------------------------------------
-TARGET		:=	saltysd_bootstrap
+TARGET		:=	saltynx_bootstrap
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data

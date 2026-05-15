@@ -145,9 +145,9 @@ int main(int argc, char *argv[])
 	uintptr_t new_addr;
 	size_t new_size;
 	#if defined(SWITCH32) || defined(OUNCE32)
-	ret = saltySDLoadELF(g_heapAddr, &new_addr, &new_size, "saltysd_core32.elf");
+	ret = saltySDLoadELF(g_heapAddr, &new_addr, &new_size, "saltynx_core32.elf");
 	#else
-	ret = saltySDLoadELF(g_heapAddr, &new_addr, &new_size, "saltysd_core.elf");
+	ret = saltySDLoadELF(g_heapAddr, &new_addr, &new_size, "saltynx_core.elf");
 	#endif
 	if (ret) goto fail;
 	

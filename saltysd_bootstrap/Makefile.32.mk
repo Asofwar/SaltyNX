@@ -32,7 +32,7 @@ ARMV6K_SYSLIB := $(DEVKITARM)/arm-none-eabi/lib/armv6k/fpu
 #	 - icon.jpg
 #	 - <libnx folder>/default_icon.jpg
 #---------------------------------------------------------------------------------
-TARGET		:=	saltysd_bootstrap32
+TARGET		:=	saltynx_bootstrap32
 BUILD		:=	build32
 SOURCES		:=	source
 DATA		:=	data
