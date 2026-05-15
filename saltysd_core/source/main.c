@@ -32,7 +32,6 @@ static char g_heap[0x8000];
 
 extern void __nx_exit_clear(void* ctx, Handle thread, void* addr);
 extern void elf_trampoline(void* context, Handle thread, void* func);
-void* __stack_tmp;
 
 Handle orig_main_thread;
 void* orig_ctx;
@@ -43,11 +42,7 @@ const size_t elf_area_size = 0x200000; //We assume that Core itself won't take m
 volatile size_t elf_area_size = 0xDEEDBEEF; //MAGIC number to be replaced after code gets compiled
 #endif
 
-ThreadVars vars_orig;
-ThreadVars vars_mine;
-
 uint64_t tid = 0;
-
 static uint32_t sharedOperationMode = 0;
 
 void __libnx_init(void* ctx, Handle main_thread, void* saved_lr)
@@ -67,14 +62,13 @@ void __libnx_init(void* ctx, Handle main_thread, void* saved_lr)
 void __attribute__((weak)) __libnx_exit(int rc)
 {
 	fsdevUnmountAll();
-
 	uintptr_t addr = SaltySDCore_getCodeStart();
-
 	__nx_exit_clear(orig_ctx, orig_main_thread, (void*)addr);
 }
 
+//Because we are not in libnx environment, we need to remove libnx check for its own THREADVARS_MAGIC from syscall_getreent.
+//This is done by using linker's -Wrap instead of what original SaltyNX used because this method was incompatible with newest libnx
 struct _reent* _real___syscall_getreent(void);
-
 struct _reent* _wrap___syscall_getreent(void)
 {
     ThreadVars* tv = getThreadVars();
