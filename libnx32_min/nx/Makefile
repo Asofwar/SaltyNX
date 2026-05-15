@@ -96,10 +96,10 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 all: lib/libnx_min.a lib/libnx_mind.a
 
 dist-bin: all
-	@tar --exclude=*~ -cjf libnx-$(VERSION).tar.bz2 include lib default_icon.jpg switch_rules switch.ld switch.specs -C external/bsd include
+	@tar --exclude=*~ -cjf libnx-$(VERSION).tar.bz2 include lib switch_rules switch.ld switch.specs -C external/bsd include
 
 dist-src:
-	@tar --exclude=*~ -cjf libnx-src-$(VERSION).tar.bz2 include source data external Makefile default_icon.jpg switch_rules switch.ld switch.specs
+	@tar --exclude=*~ -cjf libnx-src-$(VERSION).tar.bz2 include source data external Makefile switch_rules switch.ld switch.specs
 
 dist: dist-src dist-bin
 
