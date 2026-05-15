@@ -81,7 +81,7 @@ Result load_elf32_debug(Handle debug, uint64_t* start)
 		case 0x3000: {
 			file = fopen("sdmc:/SaltySD/saltysd_bootstrap32_3k.elf", "rb");
 			if (!file) {
-				SaltySD_printf("SaltySD: SaltySD/saltysd_bootstrap32_3k.elf not found, aborting...\n", ret);
+				SaltySD_printf(APP_NAME ": SaltySD/saltysd_bootstrap32_3k.elf not found, aborting...\n", ret);
 				svcCloseHandle(debug);
 				return false;
 			}
@@ -90,14 +90,14 @@ Result load_elf32_debug(Handle debug, uint64_t* start)
 		case 0x5000: {
 			file = fopen("sdmc:/SaltySD/saltysd_bootstrap32_5k.elf", "rb");
 			if (!file) {
-				SaltySD_printf("SaltySD: SaltySD/saltysd_bootstrap32_5k.elf not found, aborting...\n", ret);
+				SaltySD_printf(APP_NAME ": SaltySD/saltysd_bootstrap32_5k.elf not found, aborting...\n", ret);
 				svcCloseHandle(debug);
 				return false;
 			}
 			break;
 		}
 		default: {
-				SaltySD_printf("SaltySD: Detected rtld text-data offset 0x%lx, not supported...\n", offset);
+				SaltySD_printf(APP_NAME ": Detected rtld text-data offset 0x%lx, not supported...\n", offset);
 				svcCloseHandle(debug);
 				return false;			
 		}
@@ -182,10 +182,10 @@ Result load_elf_proc(Handle proc, uint64_t pid, uint64_t heap, uint64_t* start, 
 
 	Result rc = svcQueryProcessMemory(&meminfo, &pageinfo, proc, heap_buffer_address);
 	if (R_FAILED(rc)) {
-		SaltySD_printf("SaltySD: load_elf_proc failed query mapping 0x%lx with 0x%x\n", heap_buffer_address, rc);
+		SaltySD_printf(APP_NAME ": load_elf_proc failed query mapping 0x%lx with 0x%x\n", heap_buffer_address, rc);
 	}
 	else {
-		SaltySD_printf("SaltySD: load_elf_proc query mapping 0x%lx, addr: 0x%lx, Perm: %d, size: 0x%lx\n", heap_buffer_address, meminfo.addr, meminfo.perm, meminfo.size);
+		SaltySD_printf(APP_NAME ": load_elf_proc query mapping 0x%lx, addr: 0x%lx, Perm: %d, size: 0x%lx\n", heap_buffer_address, meminfo.addr, meminfo.perm, meminfo.size);
 		do
 		{
 			map_addr = randomGet64() & 0xFFFFFF000ull;
@@ -200,13 +200,13 @@ Result load_elf_proc(Handle proc, uint64_t pid, uint64_t heap, uint64_t* start, 
 	}
 
 	if (R_FAILED(rc)) {
-		SaltySD_printf("SaltySD: load_elf_proc failed mapping 0x%lx to 0x%lx with 0x%x\n", heap_buffer_address, elf_data, rc);
+		SaltySD_printf(APP_NAME ": load_elf_proc failed mapping 0x%lx to 0x%lx with 0x%x\n", heap_buffer_address, elf_data, rc);
 		return 1;
 	}
 
 	fread(elf_data, elf_size, 1, f);
 
-	SaltySD_printf("SaltySD: load_elf_proc loaded ELF to buffer.\n");
+	SaltySD_printf(APP_NAME ": load_elf_proc loaded ELF to buffer.\n");
 	
 	Elf_parser elf(elf_data);
 
@@ -250,7 +250,7 @@ Result load_elf_proc(Handle proc, uint64_t pid, uint64_t heap, uint64_t* start, 
 	u64 load_addr = game_start_address - 0x200000;
 	ret = svcMapProcessCodeMemory(proc, load_addr, heap, (max_vaddr - min_vaddr));
 	if (R_FAILED(ret)) {
-		SaltySD_printf("SaltySD: Search for size %lx\n", (max_vaddr - min_vaddr));
+		SaltySD_printf(APP_NAME ": Search for size %lx\n", (max_vaddr - min_vaddr));
 		do
 		{
 			load_addr = randomGet64() & 0xFFFFFF000ull;
@@ -264,7 +264,7 @@ Result load_elf_proc(Handle proc, uint64_t pid, uint64_t heap, uint64_t* start, 
 		}
 	}
 	
-	SaltySD_printf("SaltySD: Found free address space at %lx, size %lx\n", load_addr, (max_vaddr - min_vaddr));
+	SaltySD_printf(APP_NAME ": Found free address space at %lx, size %lx\n", load_addr, (max_vaddr - min_vaddr));
 	
 	// Adjust permissions and then return
 	for (auto seg : elf.get_segments())
@@ -313,10 +313,10 @@ Result load_elf32_proc(Handle proc, uint64_t pid, uint32_t heap, uint32_t* start
 
 	Result rc = svcQueryProcessMemory(&meminfo, &pageinfo, proc, heap);
 	if (R_FAILED(rc)) {
-		SaltySD_printf("SaltySD: load_elf_proc failed query mapping 0x%lx with 0x%x\n", heap, rc);
+		SaltySD_printf(APP_NAME ": load_elf_proc failed query mapping 0x%lx with 0x%x\n", heap, rc);
 	}
 	else {
-		SaltySD_printf("SaltySD: load_elf_proc query mapping 0x%lx, addr: 0x%lx, Perm: %d, size: 0x%lx\n", heap, meminfo.addr, meminfo.perm, meminfo.size);
+		SaltySD_printf(APP_NAME ": load_elf_proc query mapping 0x%lx, addr: 0x%lx, Perm: %d, size: 0x%lx\n", heap, meminfo.addr, meminfo.perm, meminfo.size);
 		do
 		{
 			map_addr = randomGet64() & 0xFFFFFF000ull;
@@ -331,7 +331,7 @@ Result load_elf32_proc(Handle proc, uint64_t pid, uint32_t heap, uint32_t* start
 	}
 
 	if (R_FAILED(rc)) {
-		SaltySD_printf("SaltySD: load_elf_proc failed mapping 0x%lx to 0x%lx with 0x%x\n", heap, elf_data, rc);
+		SaltySD_printf(APP_NAME ": load_elf_proc failed mapping 0x%lx to 0x%lx with 0x%x\n", heap, elf_data, rc);
 		return 1;
 	}
 
@@ -377,7 +377,7 @@ Result load_elf32_proc(Handle proc, uint64_t pid, uint32_t heap, uint32_t* start
 	// Unmap heap, map new code
 	
 	u32 load_addr;
-	SaltySD_printf("SaltySD: Search for size %lx\n", (max_vaddr - min_vaddr));
+	SaltySD_printf(APP_NAME ": Search for size %lx\n", (max_vaddr - min_vaddr));
 	do
 	{	
 		randomGet(&load_addr, 4);
@@ -391,7 +391,7 @@ Result load_elf32_proc(Handle proc, uint64_t pid, uint32_t heap, uint32_t* start
 		return ret;
 	}
 	
-	SaltySD_printf("SaltySD: Found free address space at %lx, size %lx\n", load_addr, (max_vaddr - min_vaddr));
+	SaltySD_printf(APP_NAME ": Found free address space at %lx, size %lx\n", load_addr, (max_vaddr - min_vaddr));
 	
 	uint32_t data_addr = 0;
 	uint32_t read_addr = 0;

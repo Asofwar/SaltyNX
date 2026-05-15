@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #define SERVICE_LOG(fmt, ...) \
-    SaltySD_printf("SaltyNX: [%s] " fmt "\n", __func__, ##__VA_ARGS__)
+    SaltySD_printf(APP_NAME ": [%s] " fmt "\n", __func__, ##__VA_ARGS__)
 
 #define SALTYSD_RESULT(id, val) MAKERESULT(MODULE_SALTYSD, 9000 + ((id) * 10) + (val))
 
@@ -269,7 +269,7 @@ static Result serviceLog() {
 
     const char* log = r.Buffers[0];
 
-    SaltySD_printf("SaltyNX: [log] %s", log);
+    SaltySD_printf(APP_NAME ": [log] %s", log);
 
     return 0;
 }
@@ -1214,7 +1214,7 @@ static Result handleServiceCmd(int cmd)
 void serviceThread()
 {
     Result ret;
-    SaltySD_printf("SaltySD: accepting service calls\n");
+    SaltySD_printf(APP_NAME ": accepting service calls\n");
     should_terminate = false;
 
     while (1)
@@ -1223,11 +1223,11 @@ void serviceThread()
         ret = svcAcceptSession(&session, saltyport);
         if (ret && ret != 0xf201)
         {
-            SaltySD_printf("SaltySD: svcAcceptSession returned %x\n", ret);
+            SaltySD_printf(APP_NAME ": svcAcceptSession returned %x\n", ret);
         }
         else if (!ret)
         {
-            SaltySD_printf("SaltySD: session %x being handled\n", session);
+            SaltySD_printf(APP_NAME ": session %x being handled\n", session);
 
             int handle_index;
             Handle replySession = 0;
@@ -1267,5 +1267,5 @@ void serviceThread()
         svcSleepThread(1000*1000*100);
     }
     
-    SaltySD_printf("SaltySD: done accepting service calls\n");
+    SaltySD_printf(APP_NAME ": done accepting service calls\n");
 }

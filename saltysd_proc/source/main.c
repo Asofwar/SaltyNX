@@ -331,7 +331,7 @@ void Initialize() {
     ABORT_IF_FAILED(smInitialize(), 1);
     ABORT_IF_FAILED(fsInitialize(), 2);
     ABORT_IF_FAILED(fsdevMountSdmc(), 3);
-    SaltySD_printf("SaltySD " APP_VERSION ": got SD card.\n");
+    SaltySD_printf(APP_NAME " " APP_VERSION ": got SD card.\n");
 
     
     ABORT_IF_FAILED(setsysInitialize(), 10);
@@ -342,26 +342,26 @@ void Initialize() {
         hosversionSet(MAKEHOSVERSION(fw.major, fw.minor, fw.micro));
     }
     else {
-        SaltySD_printf("SaltySD: Couldn't retrieve Firmware Version! rc: 0x%x.\n", rc);
+        SaltySD_printf(APP_NAME ": Couldn't retrieve Firmware Version! rc: 0x%x.\n", rc);
     }
 
     SetSysProductModel model;
     if (R_SUCCEEDED(setsysGetProductModel(&model))) {
         if (model == SetSysProductModel_Aula) {
-            SaltySD_printf("SaltySD: Detected OLED model. Locking minimum refresh rate to 45 Hz.\n");
+            SaltySD_printf(APP_NAME ": Detected OLED model. Locking minimum refresh rate to 45 Hz.\n");
             isOLED = true;
             HandheldModeRefreshRateAllowed.min = 45;
         }
         else if (model == SetSysProductModel_Hoag) {
             isLite = true;
-            SaltySD_printf("SaltySD: Detected Lite model. Docked refresh rate will be blocked.\n");
+            SaltySD_printf(APP_NAME ": Detected Lite model. Docked refresh rate will be blocked.\n");
         }
     }
     
     ABORT_IF_FAILED(nvInitialize(), 6);
     u32 fd = 0;
     if (R_FAILED(nvOpen(&fd, "/dev/nvdisp-disp0"))) {
-        SaltySD_printf("SaltySD: Couldn't open /dev/nvdisp-disp0! Can't check if using Retro Remake display.\n");
+        SaltySD_printf(APP_NAME ": Couldn't open /dev/nvdisp-disp0! Can't check if using Retro Remake display.\n");
     }
     else {
         struct vendorID {
@@ -414,19 +414,19 @@ void Initialize() {
 
     // Start our port
     // For some reason, we only have one session maximum (0 reslimit handle related?)	
-    svcManageNamedPort(&saltyport, "SaltySD", 1);
+    svcManageNamedPort(&saltyport, APP_NAME "", 1);
     svcManageNamedPort(&injectserv, "InjectServ", 1);
 
     uint64_t dummy = 0;
     rc = svcQueryMemoryMapping(&clkVirtAddr, &dummy, 0x60006000, 0x1000);
     if (R_FAILED(rc)) {
-        SaltySD_printf("SaltySD: Retrieving virtual address for 0x60006000 failed. RC: 0x%x.\n", rc);
+        SaltySD_printf(APP_NAME ": Retrieving virtual address for 0x60006000 failed. RC: 0x%x.\n", rc);
         clkVirtAddr = 0;
     }
     if (isOLED) {
         Result rc = svcQueryMemoryMapping(&dsiVirtAddr, &dummy, 0x54300000, 0x40000);
         if (R_FAILED(rc)) {
-            SaltySD_printf("SaltySD: Retrieving virtual address for 0x54300000 failed. RC: 0x%x.\n", rc);
+            SaltySD_printf(APP_NAME ": Retrieving virtual address for 0x54300000 failed. RC: 0x%x.\n", rc);
             dsiVirtAddr = 0;
         }
     }

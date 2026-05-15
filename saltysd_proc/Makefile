@@ -31,6 +31,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 include $(TOPDIR)/../version.mk
 
+APP_NAME    :=  SaltyNX
 TARGET		:=	saltysd_proc
 BUILD		:=	build
 SOURCES		:=	source
@@ -47,7 +48,7 @@ CFLAGS	:=	-g -Wall -Werror -Os \
 			-ffast-math -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -DSWITCH -DAPP_VERSION=\"$(VERSION)\"
+CFLAGS	+=	$(INCLUDE) -DSWITCH -DAPP_VERSION=\"$(VERSION)\" -DAPP_NAME=\"$(APP_NAME)\"
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++23
 
